@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useParams, useSearchParams } from 'react-router'
 
+import { ContributionHeatmap } from '../components/profile/ContributionHeatmap'
 import { ProfileCard } from '../components/profile/ProfileCard'
 import { useUserStats } from '../lib/useUserStats'
 
@@ -26,7 +27,9 @@ export function ProfilePage() {
           <div>
             <ProfileCard profile={data.profile} />
           </div>
-          <div className="min-w-0 space-y-gutter-mobile lg:space-y-gutter" />
+          <div className="min-w-0 space-y-gutter-mobile lg:space-y-gutter">
+            <ContributionHeatmap stats={data} busy={state.status === 'loading'} />
+          </div>
         </div>
       ) : state.status === 'error' ? (
         <p role="alert">
