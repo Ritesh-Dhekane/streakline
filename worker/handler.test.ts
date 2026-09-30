@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { rawEvents, rawUser } from '../shared/github/fixtures'
-import { handle, type Deps, type Env, type ResponseCache } from './handler'
+import { DAILY_LOOKUPS } from '../shared/limits'
+import { handle, type Deps, type Env, type LookupStore, type ResponseCache } from './handler'
 
 const ORIGIN = 'https://ritesh-dhekane.github.io'
 const ENV: Env = { GITHUB_TOKEN: 't0ken', ALLOWED_ORIGINS: `${ORIGIN},http://localhost:5173` }
@@ -116,5 +117,91 @@ describe('handle', () => {
     expect(response.status).toBe(500)
     expect(await response.json()).toMatchObject({ error: { code: 'not_configured' } })
     expect(fetch).not.toHaveBeenCalled()
+  })
+})
+
+class MemoryLookups implements LookupStore {
+  rows: { visitor: string; login: string; at: number }[] = []
+  async recent(visitor: string, since: number) {
+    return this.rows.filter((row) => row.visitor === visitor && row.at > since)
+  }
+  async record(visitor: string, login: string, at: number) {
+    this.rows.push({ visitor, login, at })
+  }
+}
+
+describe('per-visitor lookup limit', () => {
+  function limited(graphql?: () => Response) {
+    const base = setup(graphql)
+    const lookups = new MemoryLookups()
+    const pending: Promise<unknown>[] = []
+    const deps: Deps = {
+      cache: base.cache,
+      fetch: base.fetch,
+      now: () => NOW,
+      waitUntil: (p) => pending.push(p),
+      lookups,
+    }
+    const call = async (login: string, ip = '203.0.113.7') => {
+      const response = await handle(
+        new Request(`https://api.example/api/user/${login}`, {
+          headers: { Origin: ORIGIN, 'CF-Connecting-IP': ip },
+        }),
+        ENV,
+        deps,
+      )
+      await Promise.all(pending)
+      return response
+    }
+    return { call, lookups, fetch: base.fetch }
+  }
+
+  it(`allows ${DAILY_LOOKUPS} different users a day, then refuses new ones`, async () => {
+    const { call, fetch } = limited()
+    for (let i = 0; i < DAILY_LOOKUPS; i++) {
+      const response = await call(`user${i}`)
+      expect(response.status).toBe(200)
+      expect(response.headers.get('X-Lookups-Remaining')).toBe(String(DAILY_LOOKUPS - 1 - i))
+    }
+    const calls = fetch.mock.calls.length
+    const refused = await call('one-more')
+    expect(refused.status).toBe(429)
+    expect(await refused.json()).toMatchObject({ error: { code: 'quota_exceeded' } })
+    expect(Number(refused.headers.get('Retry-After'))).toBeGreaterThan(0)
+    expect(refused.headers.get('X-Lookups-Reset')).toBe('2026-01-06T12:00:00.000Z')
+    expect(refused.headers.get('Access-Control-Expose-Headers')).toContain('X-Lookups-Remaining')
+    expect(fetch.mock.calls.length).toBe(calls)
+  })
+
+  it('keeps repeats, exempt profiles and other visitors free', async () => {
+    const { call, lookups } = limited()
+    for (let i = 0; i < DAILY_LOOKUPS; i++) await call(`user${i}`)
+    expect((await call('USER3')).status).toBe(200)
+    expect((await call('Ritesh-Dhekane')).status).toBe(200)
+    expect((await call('torvalds')).status).toBe(200)
+    const other = await call('one-more', '198.51.100.9')
+    expect(other.status).toBe(200)
+    expect(other.headers.get('X-Lookups-Remaining')).toBe(String(DAILY_LOOKUPS - 1))
+    expect(lookups.rows).toHaveLength(DAILY_LOOKUPS + 1)
+  })
+
+  it('does not charge for users that do not exist', async () => {
+    const { call, lookups } = limited(() =>
+      json({ data: { user: null }, errors: [{ type: 'NOT_FOUND', message: 'x' }] }),
+    )
+    const response = await call('ghost')
+    expect(response.status).toBe(404)
+    expect(response.headers.get('X-Lookups-Remaining')).toBe(String(DAILY_LOOKUPS))
+    expect(lookups.rows).toHaveLength(0)
+  })
+
+  it('charges for cached profiles too, and never stores the IP', async () => {
+    const { call, lookups } = limited()
+    await call('octo', '203.0.113.7')
+    const cached = await call('octo', '198.51.100.9')
+    expect(cached.headers.get('X-Streakline-Cache')).toBe('hit')
+    expect(cached.headers.get('X-Lookups-Remaining')).toBe(String(DAILY_LOOKUPS - 1))
+    expect(lookups.rows).toHaveLength(2)
+    expect(JSON.stringify(lookups.rows)).not.toContain('203.0.113.7')
   })
 })

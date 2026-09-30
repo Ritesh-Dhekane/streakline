@@ -6,3 +6,12 @@ compatibility_date = "2026-09-01"
 
 [vars]
 ALLOWED_ORIGINS = "https://ritesh-dhekane.github.io,http://localhost:5173,http://localhost:4173,http://127.0.0.1:5173"
+
+# Per-visitor lookup allowance (shared/limits.ts). Create once with
+# `npx wrangler d1 create streakline`, put the printed database_id below, then
+# `npx wrangler d1 migrations apply streakline --remote`.
+[[d1_databases]]
+binding = "DB"
+database_name = "streakline"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
