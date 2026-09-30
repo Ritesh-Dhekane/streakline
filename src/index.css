@@ -1,1 +1,175 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/jetbrains-mono';
+
+/* Design tokens from the Stitch "Telemetry Minimal" system (see the brain's
+   docs/design/telemetry_minimal/DESIGN.md). Class names match Stitch's markup,
+   e.g. bg-surface-container-low, text-on-surface-variant, font-label-md. */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --c-background: #f8fafc;
+  --c-surface: #f8fafc;
+  --c-surface-container-lowest: #ffffff;
+  --c-surface-container-low: #ffffff;
+  --c-surface-container: #f1f5f9;
+  --c-surface-container-high: #e8edf3;
+  --c-surface-container-highest: #e2e8f0;
+  --c-on-surface: #0f172a;
+  --c-on-surface-variant: #475569;
+  --c-outline: #64748b;
+  --c-outline-variant: #cbd5e1;
+  --c-border: rgba(15, 23, 42, 0.08);
+  --c-primary: #047857;
+  --c-on-primary: #ffffff;
+  --c-primary-container: #10b981;
+  --c-secondary: #0e7490;
+  --c-tertiary: #059669;
+  --c-error: #b91c1c;
+  --c-heat-0: rgba(15, 23, 42, 0.06);
+  --c-heat-1: #a7f3d0;
+  --c-heat-2: #34d399;
+  --c-heat-3: #10b981;
+  --c-heat-4: #047857;
+}
+
+.dark {
+  --c-background: #0f131c;
+  --c-surface: #0f131c;
+  --c-surface-container-lowest: #0a0e16;
+  --c-surface-container-low: #181c24;
+  --c-surface-container: #1c2028;
+  --c-surface-container-high: #262a33;
+  --c-surface-container-highest: #31353e;
+  --c-on-surface: #dfe2ee;
+  --c-on-surface-variant: #bbcabf;
+  --c-outline: #86948a;
+  --c-outline-variant: #3c4a42;
+  --c-border: rgba(255, 255, 255, 0.08);
+  --c-primary: #4edea3;
+  --c-on-primary: #003824;
+  --c-primary-container: #10b981;
+  --c-secondary: #4cd7f6;
+  --c-tertiary: #45dfa4;
+  --c-error: #ffb4ab;
+  --c-heat-0: rgba(255, 255, 255, 0.04);
+  --c-heat-1: #064e3b;
+  --c-heat-2: #059669;
+  --c-heat-3: #10b981;
+  --c-heat-4: #34d399;
+}
+
+@theme inline {
+  --color-background: var(--c-background);
+  --color-surface: var(--c-surface);
+  --color-surface-container-lowest: var(--c-surface-container-lowest);
+  --color-surface-container-low: var(--c-surface-container-low);
+  --color-surface-container: var(--c-surface-container);
+  --color-surface-container-high: var(--c-surface-container-high);
+  --color-surface-container-highest: var(--c-surface-container-highest);
+  --color-on-surface: var(--c-on-surface);
+  --color-on-surface-variant: var(--c-on-surface-variant);
+  --color-outline: var(--c-outline);
+  --color-outline-variant: var(--c-outline-variant);
+  --color-border: var(--c-border);
+  --color-primary: var(--c-primary);
+  --color-on-primary: var(--c-on-primary);
+  --color-primary-container: var(--c-primary-container);
+  --color-secondary: var(--c-secondary);
+  --color-tertiary: var(--c-tertiary);
+  --color-error: var(--c-error);
+  --color-heat-0: var(--c-heat-0);
+  --color-heat-1: var(--c-heat-1);
+  --color-heat-2: var(--c-heat-2);
+  --color-heat-3: var(--c-heat-3);
+  --color-heat-4: var(--c-heat-4);
+}
+
+@theme {
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+
+  --font-headline-xl: var(--font-sans);
+  --font-headline-lg: var(--font-sans);
+  --font-headline-md: var(--font-sans);
+  --font-headline-sm: var(--font-sans);
+  --font-body-lg: var(--font-sans);
+  --font-body-md: var(--font-sans);
+  --font-body-sm: var(--font-sans);
+  --font-label-lg: var(--font-mono);
+  --font-label-md: var(--font-mono);
+  --font-label-sm: var(--font-mono);
+
+  --text-headline-xl: 48px;
+  --text-headline-xl--line-height: 56px;
+  --text-headline-xl--letter-spacing: -0.03em;
+  --text-headline-xl--font-weight: 600;
+  --text-headline-xl-mobile: 32px;
+  --text-headline-xl-mobile--line-height: 40px;
+  --text-headline-xl-mobile--letter-spacing: -0.02em;
+  --text-headline-xl-mobile--font-weight: 600;
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 40px;
+  --text-headline-lg--letter-spacing: -0.02em;
+  --text-headline-lg--font-weight: 600;
+  --text-headline-lg-mobile: 24px;
+  --text-headline-lg-mobile--line-height: 32px;
+  --text-headline-lg-mobile--letter-spacing: -0.01em;
+  --text-headline-lg-mobile--font-weight: 600;
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 32px;
+  --text-headline-md--letter-spacing: -0.015em;
+  --text-headline-md--font-weight: 500;
+  --text-headline-sm: 18px;
+  --text-headline-sm--line-height: 26px;
+  --text-headline-sm--letter-spacing: -0.01em;
+  --text-headline-sm--font-weight: 500;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body-md: 14px;
+  --text-body-md--line-height: 20px;
+  --text-body-sm: 12px;
+  --text-body-sm--line-height: 18px;
+  --text-label-lg: 13px;
+  --text-label-lg--line-height: 18px;
+  --text-label-lg--letter-spacing: 0.02em;
+  --text-label-lg--font-weight: 500;
+  --text-label-md: 12px;
+  --text-label-md--line-height: 16px;
+  --text-label-md--letter-spacing: 0.03em;
+  --text-label-md--font-weight: 500;
+  --text-label-sm: 11px;
+  --text-label-sm--line-height: 14px;
+  --text-label-sm--letter-spacing: 0.04em;
+
+  --spacing-gutter: 1.5rem;
+  --spacing-gutter-mobile: 1rem;
+  --spacing-margin: 2.5rem;
+  --spacing-margin-mobile: 1.25rem;
+  --spacing-space-xs: 0.25rem;
+  --spacing-space-sm: 0.5rem;
+  --spacing-space-md: 1rem;
+  --spacing-space-lg: 1.5rem;
+  --spacing-space-xl: 2.5rem;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  --shadow-glow: 0 0 24px -4px rgba(16, 185, 129, 0.18);
+  --shadow-popover: 0 12px 32px -8px rgba(0, 0, 0, 0.5);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-on-surface font-sans antialiased;
+  }
+}
