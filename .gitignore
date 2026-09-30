@@ -26,4 +26,5 @@ dist-ssr
 # Local secrets and tooling
 .env
 .dev.vars
+*.pem
 .wrangler/
