@@ -3,11 +3,22 @@
 export const DAILY_LOOKUPS = 10
 export const LOOKUP_WINDOW_SECONDS = 24 * 60 * 60
 
-// Profiles on the landing page; nearly always cached, so they never count.
-export const EXAMPLE_LOGINS = ['torvalds', 'gaearon', 'sindresorhus', 'antfu', 'yyx990803']
+export const OWNER_LOGIN = 'Ritesh-Dhekane'
 
-// The owner's profile never counts either.
-const EXEMPT = new Set(['ritesh-dhekane', ...EXAMPLE_LOGINS])
+// Profiles on the landing page (the owner's first). They never count against the allowance.
+export const EXAMPLE_LOGINS = [
+  OWNER_LOGIN,
+  'torvalds',
+  'gaearon',
+  'sindresorhus',
+  'antfu',
+  'yyx990803',
+]
+
+// Once this few lookups are left, the site warns the visitor.
+export const LOW_LOOKUPS = 3
+
+const EXEMPT = new Set(EXAMPLE_LOGINS.map((login) => login.toLowerCase()))
 
 export function isExempt(login: string): boolean {
   return EXEMPT.has(login.toLowerCase())

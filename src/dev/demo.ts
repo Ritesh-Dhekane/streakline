@@ -3,6 +3,7 @@
 //
 //   ?demo            a busy, complete profile
 //   ?demo=minimal    no bio, location, website, orgs or badges
+//   ?demo=low        only 3 lookups left (shows the warning pop-up)
 //   ?demo=empty      an account with no public activity
 //   ?demo=loading    never finishes loading
 //   ?demo=not_found | rate_limited | quota_exceeded | upstream | network | not_configured   that error
@@ -64,7 +65,7 @@ export async function demoStats(
     throw new ApiError(error, undefined, new Date(Date.now() + 5 * 3600 * 1000))
   }
   if (error) throw new ApiError(error)
-  if (!isExempt(login)) setLookupsLeft({ remaining: 7, limit: DAILY_LOOKUPS })
+  if (!isExempt(login)) setLookupsLeft({ remaining: mode === 'low' ? 3 : 7, limit: DAILY_LOOKUPS })
 
   const now = new Date()
   const selected = year ?? now.getUTCFullYear()

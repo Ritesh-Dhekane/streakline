@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from 'react-router'
 
 import { LogoMark } from './Logo'
+import { LookupsWarning } from './LookupsWarning'
 import { ThemeToggle } from './ThemeToggle'
 import { MobileUsernameSearch, UsernameSearch } from './UsernameSearch'
 
@@ -43,6 +44,8 @@ export function Layout() {
       <main id="main" tabIndex={-1} className="flex-1 outline-none">
         <Outlet />
       </main>
+
+      <LookupsWarning />
 
       <footer className="border-t border-outline-variant/30">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-space-xs px-margin-mobile py-space-lg font-label-sm text-label-sm text-on-surface-variant sm:flex-row sm:items-center sm:justify-between md:px-margin">
