@@ -20,15 +20,33 @@ import {
   formatMonthYear,
   formatNumber,
 } from '../../lib/format'
+import { shareUrl } from '../../lib/links'
 import { Panel } from '../Panel'
+import { ProfileActions } from './ProfileActions'
 
 export function ProfileCard({ profile }: { profile: Profile }) {
   const [copied, setCopied] = useState<'login' | 'link' | null>(null)
 
   async function copy(what: 'login' | 'link') {
-    const text = what === 'login' ? profile.login : window.location.href.split('?')[0]
+    const text = what === 'login' ? profile.login : shareUrl(profile.login)
+    // Phones: the system share sheet. Elsewhere (or if it's dismissed with an error): copy.
+    if (
+      what === 'link' &&
+      typeof navigator.share === 'function' &&
+      matchMedia('(pointer: coarse)').matches
+    ) {
+      try {
+        await navigator.share({
+          title: `${profile.name ?? profile.login} on Streakline`,
+          url: text,
+        })
+        return
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+      }
+    }
     try {
-      await navigator.clipboard.writeText(text ?? '')
+      await navigator.clipboard.writeText(text)
       setCopied(what)
       setTimeout(() => setCopied(null), 1600)
     } catch {
@@ -112,6 +130,7 @@ export function ProfileCard({ profile }: { profile: Profile }) {
           {copied === 'link' ? 'Copied' : 'Share'}
         </button>
       </div>
+      <ProfileActions login={profile.login} />
 
       <ul className="mt-space-lg space-y-2.5 font-body-md text-body-md text-on-surface-variant">
         {company && (
