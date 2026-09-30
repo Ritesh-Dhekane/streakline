@@ -17,6 +17,6 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["worker/index.ts", "worker/handler.ts", "worker/lookups.ts", "shared"],
+  "include": ["worker/index.ts", "worker/handler.ts", "worker/lookups.ts", "worker/githubApp.ts", "shared"],
   "exclude": ["**/*.test.ts", "shared/github/fixtures.ts"]
 }

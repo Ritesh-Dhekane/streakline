@@ -205,3 +205,38 @@ describe('per-visitor lookup limit', () => {
     expect(JSON.stringify(lookups.rows)).not.toContain('203.0.113.7')
   })
 })
+
+describe('GitHub App tokens', () => {
+  it('uses the App token when no personal token is set', async () => {
+    const { cache, fetch } = setup()
+    const response = await handle(
+      new Request('https://api.example/api/user/octo', { headers: { Origin: ORIGIN } }),
+      { ALLOWED_ORIGINS: ORIGIN },
+      { cache, fetch, now: () => NOW, waitUntil: () => {}, appToken: async () => 'ghs_app' },
+    )
+    expect(response.status).toBe(200)
+    expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).get('Authorization')).toMatch(
+      /^bearer ghs_app$/i,
+    )
+  })
+
+  it('reports an App that cannot sign in as upstream trouble, without caching it', async () => {
+    const { cache, fetch } = setup()
+    const response = await handle(
+      new Request('https://api.example/api/user/octo', { headers: { Origin: ORIGIN } }),
+      { ALLOWED_ORIGINS: ORIGIN },
+      {
+        cache,
+        fetch,
+        now: () => NOW,
+        waitUntil: () => {},
+        appToken: async () => {
+          throw new Error('bad key')
+        },
+      },
+    )
+    expect(response.status).toBe(502)
+    expect(cache.store.size).toBe(0)
+    expect(fetch).not.toHaveBeenCalled()
+  })
+})

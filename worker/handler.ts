@@ -8,7 +8,7 @@ import {
 } from '../shared/limits'
 
 export interface Env {
-  GITHUB_TOKEN?: string
+  GITHUB_TOKEN?: string // personal token; used when no GitHub App is configured
   ALLOWED_ORIGINS?: string // comma-separated
   VISITOR_SALT?: string // optional secret mixed into visitor hashes
 }
@@ -31,6 +31,7 @@ export interface Deps {
   now: () => Date
   waitUntil: (promise: Promise<unknown>) => void
   lookups?: LookupStore // no store = no limit
+  appToken?: () => Promise<string> // GitHub App installation tokens (worker/githubApp.ts)
 }
 
 const ROUTE = /^\/api\/user\/([^/]+)\/?$/
@@ -67,7 +68,9 @@ export async function handle(request: Request, env: Env, deps: Deps): Promise<Re
   if (year === null) {
     return withHeaders(errorResponse(400, 'bad_request', 'Not a valid year'), cors)
   }
-  if (!env.GITHUB_TOKEN) {
+  const personalToken = env.GITHUB_TOKEN
+  const getToken = personalToken ? async () => personalToken : deps.appToken
+  if (!getToken) {
     return withHeaders(errorResponse(500, 'not_configured', 'The API is not configured'), cors)
   }
 
@@ -109,8 +112,14 @@ export async function handle(request: Request, env: Env, deps: Deps): Promise<Re
   let response: Response
   let cacheSeconds = 0
   try {
+    let token: string
+    try {
+      token = await getToken()
+    } catch {
+      throw new GitHubError('upstream', 'Could not authenticate with GitHub')
+    }
     const stats = await fetchUserStats(login, year, {
-      token: env.GITHUB_TOKEN,
+      token,
       fetch: deps.fetch,
       now,
     })
