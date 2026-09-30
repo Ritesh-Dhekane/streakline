@@ -1,4 +1,5 @@
 import {
+  Activity,
   Flame,
   GitCommitHorizontal,
   GitMerge,
@@ -35,7 +36,7 @@ export function StatTiles({ stats }: { stats: UserStats }) {
     {
       label: 'Contributions',
       value: formatNumber(totals.contributions),
-      icon: down ? TrendingDown : TrendingUp,
+      icon: change ? (down ? TrendingDown : TrendingUp) : Activity,
       tone: change ? (down ? 'muted' : 'primary') : 'muted',
       note: change ? `${change} YoY` : `in ${year}`,
       title: change ? `Compared with the same period of ${year - 1}` : undefined,

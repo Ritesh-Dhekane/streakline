@@ -2,7 +2,9 @@ import { useEffect } from 'react'
 import { useParams, useSearchParams } from 'react-router'
 
 import { ContributionHeatmap } from '../components/profile/ContributionHeatmap'
+import { LanguageBreakdown } from '../components/profile/LanguageBreakdown'
 import { ProfileCard } from '../components/profile/ProfileCard'
+import { RhythmChart } from '../components/profile/RhythmChart'
 import { StatTiles } from '../components/profile/StatTiles'
 import { useUserStats } from '../lib/useUserStats'
 
@@ -31,6 +33,10 @@ export function ProfilePage() {
           <div className="min-w-0 space-y-gutter-mobile lg:space-y-gutter">
             <ContributionHeatmap stats={data} busy={state.status === 'loading'} />
             <StatTiles stats={data} />
+            <div className="grid gap-gutter-mobile lg:gap-gutter xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+              <RhythmChart stats={data} />
+              <LanguageBreakdown stats={data} />
+            </div>
           </div>
         </div>
       ) : state.status === 'error' ? (
