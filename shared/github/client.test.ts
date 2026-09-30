@@ -36,7 +36,7 @@ describe('fetchUserStats', () => {
     expect(stats.recentActivity).toHaveLength(1)
     const [url, init] = fetch.mock.calls.find(([u]) => String(u).endsWith('/graphql'))!
     expect(String(url)).toBe('https://api.github.com/graphql')
-    expect((init?.headers as Record<string, string>).Authorization).toBe('bearer t0ken')
+    expect(new Headers(init?.headers).get('Authorization')).toBe('bearer t0ken')
     const body = JSON.parse(String(init?.body))
     expect(body.variables).toMatchObject({
       login: 'octo',
