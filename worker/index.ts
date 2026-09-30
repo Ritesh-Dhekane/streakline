@@ -1,9 +1,10 @@
 import { githubAppTokens } from './githubApp'
-import { handle, type Env } from './handler'
+import { handle, type Env, type RateLimiter } from './handler'
 import { d1Lookups } from './lookups'
 
 interface WorkerEnv extends Env {
   DB?: D1Database
+  CARD_LIMITER?: RateLimiter
   GITHUB_APP_ID?: string
   GITHUB_APP_INSTALLATION_ID?: string
   GITHUB_APP_PRIVATE_KEY?: string
@@ -36,6 +37,7 @@ export default {
       // Without a D1 binding (e.g. local dev) there's no lookup limit.
       lookups: env.DB ? d1Lookups(env.DB) : undefined,
       appToken: appTokens(env),
+      limiter: env.CARD_LIMITER,
     })
   },
 } satisfies ExportedHandler<WorkerEnv>

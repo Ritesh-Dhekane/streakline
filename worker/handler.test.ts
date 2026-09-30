@@ -240,3 +240,90 @@ describe('GitHub App tokens', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 })
+
+describe('cards and share pages', () => {
+  const PNG = new Uint8Array([137, 80, 78, 71])
+
+  function cards(options: { limited?: boolean; graphql?: () => Response } = {}) {
+    const cache = new MemoryCache()
+    const lookups = new MemoryLookups()
+    const pending: Promise<unknown>[] = []
+    const fetch = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = String(input)
+      if (url.endsWith('/graphql'))
+        return options.graphql?.() ?? json({ data: { user: rawUser() } })
+      if (url.startsWith('https://avatars.example/'))
+        return new Response(PNG, { headers: { 'Content-Type': 'image/png' } })
+      return json(rawEvents)
+    })
+    const deps: Deps = {
+      cache,
+      fetch,
+      now: () => NOW,
+      waitUntil: (p) => pending.push(p),
+      lookups,
+      limiter: { limit: async () => ({ success: !options.limited }) },
+    }
+    const call = async (path: string) => {
+      const response = await handle(
+        new Request(`https://api.example${path}`, {
+          headers: { 'CF-Connecting-IP': '203.0.113.7' },
+        }),
+        { ...ENV, SITE_URL: 'https://site.example/streakline/' },
+        deps,
+      )
+      await Promise.all(pending)
+      return response
+    }
+    return { call, fetch, lookups }
+  }
+
+  it('serves a cached SVG badge with the avatar embedded, without using the allowance', async () => {
+    const { call, fetch, lookups } = cards()
+    const response = await call('/card/octo.svg?theme=light')
+    expect(response.headers.get('Content-Type')).toContain('image/svg+xml')
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*')
+    expect(response.headers.get('Cache-Control')).toBe('public, max-age=21600')
+    const svg = await response.text()
+    expect(svg).toContain('Octo Cat')
+    expect(svg).toContain('data:image/png;base64,iVBORw==')
+
+    const calls = fetch.mock.calls.length
+    expect(await (await call('/card/OCTO?theme=light')).text()).toBe(svg)
+    expect(fetch.mock.calls.length).toBe(calls)
+    expect(lookups.rows).toHaveLength(0)
+  })
+
+  it('answers unknown users and rate-limited callers with a message card', async () => {
+    const missing = cards({
+      graphql: () => json({ data: { user: null }, errors: [{ type: 'NOT_FOUND', message: 'x' }] }),
+    })
+    expect(await (await missing.call('/card/ghost.svg')).text()).toContain(
+      'No public GitHub data for @ghost',
+    )
+
+    const busy = cards({ limited: true })
+    expect(await (await busy.call('/card/octo.svg')).text()).toContain('Busy right now')
+    expect(busy.fetch).not.toHaveBeenCalled()
+  })
+
+  it('serves a share page with preview tags that sends people to the profile', async () => {
+    const { call } = cards()
+    const response = await call('/u/octo')
+    expect(response.status).toBe(200)
+    const html = await response.text()
+    expect(html).toContain('<title>Octo Cat (@octo) · Streakline</title>')
+    expect(html).toContain('property="og:image" content="https://wsrv.nl/?url=')
+    expect(html).toContain(encodeURIComponent('https://api.example/card/octo.svg?layout=og'))
+    expect(html).toContain('contributions in 2026')
+    expect(html).toContain('location.replace("https://site.example/streakline/octo")')
+    expect(html).toContain('name="twitter:card" content="summary_large_image"')
+  })
+
+  it('redirects share links for invalid usernames to the home page', async () => {
+    const { call } = cards()
+    const response = await call('/u/bad_name')
+    expect(response.status).toBe(302)
+    expect(response.headers.get('Location')).toBe('https://site.example/streakline/')
+  })
+})

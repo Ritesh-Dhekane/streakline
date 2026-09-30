@@ -6,11 +6,19 @@ import {
   type Lookup,
   type LookupDecision,
 } from '../shared/limits'
+import type { UserStats } from '../shared/types'
+import { esc, renderCard, renderMessageCard, type CardLayout, type CardTheme } from './card'
 
 export interface Env {
   GITHUB_TOKEN?: string // personal token; used when no GitHub App is configured
   ALLOWED_ORIGINS?: string // comma-separated
   VISITOR_SALT?: string // optional secret mixed into visitor hashes
+  SITE_URL?: string // the website, for share links (no trailing slash)
+}
+
+// Cloudflare's Rate Limiting binding (or a fake in tests).
+export interface RateLimiter {
+  limit(options: { key: string }): Promise<{ success: boolean }>
 }
 
 // Where each visitor's recent lookups are kept (D1 in production, a fake in tests).
@@ -32,13 +40,19 @@ export interface Deps {
   waitUntil: (promise: Promise<unknown>) => void
   lookups?: LookupStore // no store = no limit
   appToken?: () => Promise<string> // GitHub App installation tokens (worker/githubApp.ts)
+  limiter?: RateLimiter // per-IP limit for cards and share pages (they skip the visitor allowance)
 }
 
-const ROUTE = /^\/api\/user\/([^/]+)\/?$/
+const API_ROUTE = /^\/api\/user\/([^/]+)\/?$/
+const CARD_ROUTE = /^\/card\/([^/]+?)(?:\.svg)?\/?$/
+const SHARE_ROUTE = /^\/u\/([^/]+)\/?$/
+const DEFAULT_SITE = 'https://ritesh-dhekane.github.io/streakline'
 const FIRST_YEAR = 2008 // GitHub launched in 2008
 const CACHE_SECONDS = 6 * 60 * 60
 const NOT_FOUND_CACHE_SECONDS = 10 * 60
 const BROWSER_CACHE_SECONDS = 5 * 60
+const CARD_ERROR_CACHE_SECONDS = 10 * 60
+const CARD_VERSION = 2 // bump when the card design changes, so cached cards refresh
 
 interface Quota {
   store: LookupStore
@@ -56,7 +70,11 @@ export async function handle(request: Request, env: Env, deps: Deps): Promise<Re
   }
 
   const url = new URL(request.url)
-  const match = ROUTE.exec(url.pathname)
+  const card = CARD_ROUTE.exec(url.pathname)
+  if (card) return handleCard(request, url, decodeURIComponent(card[1] ?? ''), env, deps)
+  const share = SHARE_ROUTE.exec(url.pathname)
+  if (share) return handleShare(request, url, decodeURIComponent(share[1] ?? ''), env, deps)
+  const match = API_ROUTE.exec(url.pathname)
   if (!match) return withHeaders(errorResponse(404, 'not_found', 'Unknown endpoint'), cors)
 
   const login = decodeURIComponent(match[1] ?? '')
@@ -68,9 +86,7 @@ export async function handle(request: Request, env: Env, deps: Deps): Promise<Re
   if (year === null) {
     return withHeaders(errorResponse(400, 'bad_request', 'Not a valid year'), cors)
   }
-  const personalToken = env.GITHUB_TOKEN
-  const getToken = personalToken ? async () => personalToken : deps.appToken
-  if (!getToken) {
+  if (!tokenSource(env, deps)) {
     return withHeaders(errorResponse(500, 'not_configured', 'The API is not configured'), cors)
   }
 
@@ -97,32 +113,44 @@ export async function handle(request: Request, env: Env, deps: Deps): Promise<Re
     quota = { store: deps.lookups, visitor, decision }
   }
 
+  const { response, hit } = await loadStats(login, year, env, deps)
+  return withHeaders(response, {
+    ...cors,
+    ...charge(response.status, login, seconds, quota, deps),
+    'X-Streakline-Cache': hit ? 'hit' : 'miss',
+  })
+}
+
+function tokenSource(env: Env, deps: Deps): (() => Promise<string>) | undefined {
+  const personalToken = env.GITHUB_TOKEN
+  return personalToken ? async () => personalToken : deps.appToken
+}
+
+// Stats for one user and year as an API response, from the cache or GitHub (then cached).
+async function loadStats(
+  login: string,
+  year: number,
+  env: Env,
+  deps: Deps,
+): Promise<{ response: Response; hit: boolean }> {
   const cacheKey = new Request(
     `https://streakline.cache/api/user/${login.toLowerCase()}?year=${year}`,
   )
   const cached = await deps.cache.match(cacheKey)
-  if (cached) {
-    return withHeaders(cached, {
-      ...cors,
-      ...charge(cached.status, login, seconds, quota, deps),
-      'X-Streakline-Cache': 'hit',
-    })
-  }
+  if (cached) return { response: cached, hit: true }
 
+  const getToken = tokenSource(env, deps)
   let response: Response
   let cacheSeconds = 0
   try {
+    if (!getToken) throw new GitHubError('upstream', 'The API is not configured')
     let token: string
     try {
       token = await getToken()
     } catch {
       throw new GitHubError('upstream', 'Could not authenticate with GitHub')
     }
-    const stats = await fetchUserStats(login, year, {
-      token,
-      fetch: deps.fetch,
-      now,
-    })
+    const stats = await fetchUserStats(login, year, { token, fetch: deps.fetch, now: deps.now() })
     response = jsonResponse(200, stats)
     cacheSeconds = CACHE_SECONDS
   } catch (err) {
@@ -137,10 +165,173 @@ export async function handle(request: Request, env: Env, deps: Deps): Promise<Re
     stored.headers.set('Cache-Control', `public, max-age=${cacheSeconds}`)
     deps.waitUntil(deps.cache.put(cacheKey, stored))
   }
-  return withHeaders(response, {
-    ...cors,
-    ...charge(response.status, login, seconds, quota, deps),
-    'X-Streakline-Cache': 'miss',
+  return { response, hit: false }
+}
+
+// README badge / social preview image: GET /card/<user>.svg?theme=dark|light&layout=badge|og
+async function handleCard(
+  request: Request,
+  url: URL,
+  login: string,
+  env: Env,
+  deps: Deps,
+): Promise<Response> {
+  const theme: CardTheme = url.searchParams.get('theme') === 'light' ? 'light' : 'dark'
+  const layout: CardLayout = url.searchParams.get('layout') === 'og' ? 'og' : 'badge'
+  if (!isValidUsername(login)) {
+    return svgResponse(renderMessageCard('Not a valid GitHub username', theme), 0)
+  }
+  const year = deps.now().getUTCFullYear()
+  const cacheKey = new Request(
+    `https://streakline.cache/card/${login.toLowerCase()}?theme=${theme}&layout=${layout}&year=${year}&v=${CARD_VERSION}`,
+  )
+  const cached = await deps.cache.match(cacheKey)
+  if (cached) return svgResponse(await cached.text(), CACHE_SECONDS)
+  if (!(await allowed(request, deps))) {
+    return svgResponse(renderMessageCard('Busy right now, try again in a minute', theme), 0)
+  }
+
+  const stats = await statsFor(login, year, env, deps)
+  if (!stats) {
+    const message = renderMessageCard(`No public GitHub data for @${login}`, theme)
+    return svgResponse(message, CARD_ERROR_CACHE_SECONDS)
+  }
+  const svg = renderCard(stats, {
+    theme,
+    layout,
+    avatar: await avatarDataUri(stats.profile.avatarUrl, deps),
+    siteLabel: siteUrl(env).replace(/^https?:\/\//, ''),
+  })
+  deps.waitUntil(
+    deps.cache.put(
+      cacheKey,
+      new Response(svg, { headers: { 'Cache-Control': `public, max-age=${CACHE_SECONDS}` } }),
+    ),
+  )
+  return svgResponse(svg, CACHE_SECONDS)
+}
+
+// Share link with a rich preview: GET /u/<user> → Open Graph tags, then on to the profile page.
+async function handleShare(
+  request: Request,
+  url: URL,
+  login: string,
+  env: Env,
+  deps: Deps,
+): Promise<Response> {
+  const site = siteUrl(env)
+  if (!isValidUsername(login)) return Response.redirect(`${site}/`, 302)
+  const profileUrl = `${site}/${login}`
+  const year = deps.now().getUTCFullYear()
+  const stats = (await allowed(request, deps)) ? await statsFor(login, year, env, deps) : null
+
+  const name = stats?.profile.name?.trim() || login
+  const title = `${name} (@${login}) · Streakline`
+  const description = stats ? shareDescription(stats) : 'Public GitHub activity, beautifully.'
+  // Social sites need PNG; wsrv.nl turns the SVG card into one (and caches it). Changes daily.
+  const day = deps.now().toISOString().slice(0, 10)
+  const cardUrl = `${url.origin}/card/${encodeURIComponent(login)}.svg?layout=og&d=${day}`
+  const image = `https://wsrv.nl/?url=${encodeURIComponent(cardUrl)}&output=png&w=1200`
+  const redirect = JSON.stringify(profileUrl).replace(/</g, '\\u003c')
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(description)}">
+<meta property="og:type" content="profile">
+<meta property="og:site_name" content="Streakline">
+<meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(description)}">
+<meta property="og:url" content="${esc(url.origin + url.pathname)}">
+<meta property="og:image" content="${esc(image)}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${esc(`${name}'s GitHub activity`)}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${esc(title)}">
+<meta name="twitter:description" content="${esc(description)}">
+<meta name="twitter:image" content="${esc(image)}">
+<link rel="canonical" href="${esc(profileUrl)}">
+<meta http-equiv="refresh" content="0; url=${esc(profileUrl)}">
+</head>
+<body>
+<p><a href="${esc(profileUrl)}">Open ${esc(name)} on Streakline</a></p>
+<script>location.replace(${redirect})</script>
+</body>
+</html>`
+  return new Response(html, {
+    status: stats ? 200 : 404,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': `public, max-age=${stats ? 60 * 60 : 60}`,
+    },
+  })
+}
+
+export function shareDescription(stats: UserStats): string {
+  const parts = [
+    `${stats.totals.contributions.toLocaleString('en-US')} contributions in ${stats.year}`,
+  ]
+  const streak = stats.streaks.current?.length ?? 0
+  if (streak > 1) parts.push(`${streak}-day streak`)
+  else if (stats.streaks.longest.length > 1)
+    parts.push(`longest streak ${stats.streaks.longest.length} days`)
+  const langs = stats.languages.filter((l) => l.name !== 'Other').slice(0, 3)
+  if (langs.length) parts.push(langs.map((l) => l.name).join(', '))
+  return parts.join(' · ')
+}
+
+async function statsFor(
+  login: string,
+  year: number,
+  env: Env,
+  deps: Deps,
+): Promise<UserStats | null> {
+  const { response } = await loadStats(login, year, env, deps)
+  if (response.status !== 200) return null
+  return (await response.clone().json()) as UserStats
+}
+
+// Cards and share pages skip the visitor allowance (image proxies and link crawlers share IPs),
+// so fresh GitHub lookups through them are rate limited per IP instead.
+async function allowed(request: Request, deps: Deps): Promise<boolean> {
+  if (!deps.limiter) return true
+  const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
+  return (await deps.limiter.limit({ key: ip })).success
+}
+
+async function avatarDataUri(avatarUrl: string, deps: Deps): Promise<string | null> {
+  try {
+    const sized = `${avatarUrl}${avatarUrl.includes('?') ? '&' : '?'}s=96`
+    const response = await deps.fetch(sized)
+    const type = response.headers.get('Content-Type') ?? 'image/png'
+    if (!response.ok || !type.startsWith('image/')) return null
+    const bytes = new Uint8Array(await response.arrayBuffer())
+    if (bytes.length > 150_000) return null
+    let binary = ''
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+    }
+    return `data:${type};base64,${btoa(binary)}`
+  } catch {
+    return null
+  }
+}
+
+function siteUrl(env: Env): string {
+  return (env.SITE_URL ?? DEFAULT_SITE).replace(/\/+$/, '')
+}
+
+function svgResponse(svg: string, maxAge: number): Response {
+  return new Response(svg, {
+    headers: {
+      'Content-Type': 'image/svg+xml; charset=utf-8',
+      'Cache-Control': maxAge > 0 ? `public, max-age=${maxAge}` : 'no-store',
+      // Public images: any page may load them (the site downloads them as PNG).
+      'Access-Control-Allow-Origin': '*',
+      'X-Content-Type-Options': 'nosniff',
+    },
   })
 }
 
