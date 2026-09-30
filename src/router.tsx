@@ -5,6 +5,7 @@ import { ComparePage } from './pages/ComparePage'
 import { LandingPage } from './pages/LandingPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { ReviewPage } from './pages/ReviewPage'
 
 export const router = createBrowserRouter(
   [
@@ -14,6 +15,7 @@ export const router = createBrowserRouter(
         { index: true, element: <LandingPage /> },
         { path: ':username', element: <ProfilePage /> },
         { path: ':username/vs/:other', element: <ComparePage /> },
+        { path: ':username/review/:year', element: <ReviewPage /> },
         { path: '*', element: <NotFoundPage /> },
       ],
     },

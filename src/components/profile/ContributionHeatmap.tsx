@@ -1,4 +1,6 @@
+import { ArrowRight } from 'lucide-react'
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { Link } from 'react-router'
 
 import type { UserStats } from '../../../shared/types'
 import { formatLongDay, formatNumber, plural } from '../../lib/format'
@@ -111,6 +113,12 @@ export function ContributionHeatmap({ stats }: { stats: UserStats }) {
               {stats.totals.contributions === 1 ? 'contribution' : 'contributions'} in {stats.year}
             </span>
           </h2>
+          <Link
+            to={`/${stats.profile.login}/review/${stats.year}`}
+            className="mt-space-xs inline-flex items-center gap-1 font-label-sm text-label-sm text-secondary hover:underline"
+          >
+            {stats.year} in review <ArrowRight className="size-3.5" aria-hidden="true" />
+          </Link>
         </div>
         <YearSwitcher years={stats.years} selected={stats.year} />
       </div>
