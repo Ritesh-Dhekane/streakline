@@ -1,4 +1,5 @@
 import type { UserStats } from '../../shared/types'
+import { API_BASE } from './links'
 import { setLookupsLeft } from './lookups'
 import { parseUsernameInput } from './username'
 
@@ -21,8 +22,6 @@ export class ApiError extends Error {
     this.retryAt = retryAt
   }
 }
-
-const API_BASE = (import.meta.env.VITE_API_BASE ?? '').replace(/\/+$/, '')
 
 // Dev only: `?demo` (or `?demo=not_found`, `?demo=loading`, …) serves generated data so the
 // page can be built without a deployed Worker. Stripped from production builds.
