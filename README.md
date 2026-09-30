@@ -73,6 +73,15 @@ npm run dev          # site on http://localhost:5173/streakline/
 The site reads the Worker URL from `VITE_API_BASE` at build time. Allowed browser origins are
 set in `wrangler.toml` (`ALLOWED_ORIGINS`).
 
+### 3. Publish the site
+
+Every push to `main` runs checks and deploys to GitHub Pages
+(`.github/workflows/deploy.yml`). One-time setup in the repository settings:
+
+1. **Pages** → Build and deployment → Source: **GitHub Actions**.
+2. **Secrets and variables → Actions → Variables** → add `VITE_API_BASE` with the Worker URL.
+   Re-run the workflow after changing it.
+
 ## Project layout
 
 ```
