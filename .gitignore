@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local secrets and tooling
+.env
+.dev.vars
+.wrangler/
