@@ -2,7 +2,7 @@ import { Search } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 
-import { isValidUsername } from '../../shared/github/client'
+import { parseUsernameInput } from '../lib/username'
 
 // Compact username box for the header; the landing page has its own large version.
 export function UsernameSearch() {
@@ -12,8 +12,8 @@ export function UsernameSearch() {
 
   function submit(event: FormEvent) {
     event.preventDefault()
-    const login = value.trim().replace(/^@/, '')
-    if (!isValidUsername(login)) {
+    const login = parseUsernameInput(value)
+    if (!login) {
       setInvalid(true)
       return
     }
