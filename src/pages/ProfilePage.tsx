@@ -1,11 +1,13 @@
 import { useEffect } from 'react'
 import { useParams, useSearchParams } from 'react-router'
 
+import { ContributesTo } from '../components/profile/ContributesTo'
 import { ContributionHeatmap } from '../components/profile/ContributionHeatmap'
 import { LanguageBreakdown } from '../components/profile/LanguageBreakdown'
 import { ProfileCard } from '../components/profile/ProfileCard'
 import { RhythmChart } from '../components/profile/RhythmChart'
 import { StatTiles } from '../components/profile/StatTiles'
+import { TopRepositories } from '../components/profile/TopRepositories'
 import { useUserStats } from '../lib/useUserStats'
 
 export function ProfilePage() {
@@ -27,7 +29,7 @@ export function ProfilePage() {
     <div className="mx-auto max-w-[1440px] px-margin-mobile py-space-lg md:px-margin md:py-space-xl">
       {data ? (
         <div className="grid gap-gutter-mobile lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-gutter xl:grid-cols-[320px_minmax(0,1fr)]">
-          <div>
+          <div className="lg:sticky lg:top-24 lg:self-start">
             <ProfileCard profile={data.profile} />
           </div>
           <div className="min-w-0 space-y-gutter-mobile lg:space-y-gutter">
@@ -37,6 +39,8 @@ export function ProfilePage() {
               <RhythmChart stats={data} />
               <LanguageBreakdown stats={data} />
             </div>
+            <TopRepositories stats={data} />
+            <ContributesTo stats={data} />
           </div>
         </div>
       ) : state.status === 'error' ? (
