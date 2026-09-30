@@ -15,6 +15,7 @@ import {
 import { RhythmChart } from '../components/profile/RhythmChart'
 import { StatTiles } from '../components/profile/StatTiles'
 import { TopRepositories } from '../components/profile/TopRepositories'
+import { rememberProfile } from '../lib/recent'
 import { useUserStats } from '../lib/useUserStats'
 
 const FIRST_YEAR = 2008 // GitHub launched in 2008
@@ -26,6 +27,11 @@ export function ProfilePage() {
   const { state, retry } = useUserStats(username, year)
   const data = state.status === 'error' ? null : state.data
   const busy = state.status === 'loading'
+
+  const ready = state.status === 'ready' ? state.data.profile : null
+  useEffect(() => {
+    if (ready) rememberProfile({ login: ready.login, name: ready.name, avatarUrl: ready.avatarUrl })
+  }, [ready])
 
   useEffect(() => {
     const name = data?.profile.name ?? data?.profile.login ?? username

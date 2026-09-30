@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router'
 
 import { DAILY_LOOKUPS, EXAMPLE_LOGINS } from '../../shared/limits'
 import { GridMotif } from '../components/GridMotif'
+import { RecentlyViewed } from '../components/RecentlyViewed'
 import { parseUsernameInput } from '../lib/username'
 
 const HIGHLIGHTS = [
@@ -106,6 +107,7 @@ export function LandingPage() {
             </Link>
           ))}
         </div>
+        <RecentlyViewed />
         <p className="mt-space-md font-label-sm text-label-sm text-on-surface-variant">
           Free · up to {DAILY_LOOKUPS} profiles a day per visitor · the examples don’t count
         </p>
