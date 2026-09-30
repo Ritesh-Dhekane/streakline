@@ -1,0 +1,2 @@
+# Copy to .dev.vars for `npm run worker:dev` (git-ignored). Never commit a real token.
+GITHUB_TOKEN=github_pat_xxx
