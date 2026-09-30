@@ -5,12 +5,14 @@ import {
   RotateCw,
   SearchX,
   Sprout,
+  Timer,
   UserX,
   type LucideIcon,
 } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 import { Link } from 'react-router'
 
+import { DAILY_LOOKUPS } from '../../../shared/limits'
 import type { ApiErrorCode } from '../../lib/api'
 import { Panel } from '../Panel'
 
@@ -76,7 +78,7 @@ interface StateCopy {
   retry?: boolean
 }
 
-function errorCopy(code: ApiErrorCode, login: string): StateCopy {
+function errorCopy(code: ApiErrorCode, login: string, retryAt: Date | null): StateCopy {
   switch (code) {
     case 'not_found':
       return {
@@ -96,6 +98,18 @@ function errorCopy(code: ApiErrorCode, login: string): StateCopy {
         title: 'Too many lookups right now',
         text: 'GitHub limits how often we can ask for data. Try again in a minute.',
         retry: true,
+      }
+    case 'quota_exceeded':
+      return {
+        icon: Timer,
+        title: `You’ve looked up ${DAILY_LOOKUPS} profiles today`,
+        text: (
+          <>
+            To keep Streakline free, each visitor can look up {DAILY_LOOKUPS} different GitHub users
+            a day. Profiles you’ve already opened still work
+            {retryAt ? <>, and you can look up someone new {untilText(retryAt)}</> : null}.
+          </>
+        ),
       }
     case 'not_configured':
       return {
@@ -123,13 +137,15 @@ function errorCopy(code: ApiErrorCode, login: string): StateCopy {
 export function ProfileError({
   code,
   login,
+  retryAt = null,
   onRetry,
 }: {
   code: ApiErrorCode
   login: string
+  retryAt?: Date | null
   onRetry: () => void
 }) {
-  const copy = errorCopy(code, login)
+  const copy = errorCopy(code, login, retryAt)
   return (
     <StateCard icon={copy.icon} title={copy.title} alert>
       <p>{copy.text}</p>
@@ -152,6 +168,14 @@ export function ProfileError({
       </div>
     </StateCard>
   )
+}
+
+// "in about 5 h" / "in about 20 min" / "in a moment".
+function untilText(at: Date): string {
+  const minutes = Math.ceil((at.getTime() - Date.now()) / 60000)
+  if (minutes <= 1) return 'in a moment'
+  if (minutes < 60) return `in about ${minutes} min`
+  return `in about ${Math.round(minutes / 60)} h`
 }
 
 export function NoPublicActivity({ login }: { login: string }) {

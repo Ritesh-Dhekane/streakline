@@ -5,6 +5,7 @@ import type { UserStats } from '../../shared/types'
 import { ContributesTo } from '../components/profile/ContributesTo'
 import { ContributionHeatmap } from '../components/profile/ContributionHeatmap'
 import { LanguageBreakdown } from '../components/profile/LanguageBreakdown'
+import { LookupsLeft } from '../components/profile/LookupsLeft'
 import { ProfileCard } from '../components/profile/ProfileCard'
 import {
   NoPublicActivity,
@@ -38,12 +39,18 @@ export function ProfilePage() {
     <div className="mx-auto max-w-[1440px] px-margin-mobile py-space-lg md:px-margin md:py-space-xl">
       {state.status === 'error' ? (
         <div className="mx-auto max-w-xl py-space-xl">
-          <ProfileError code={state.error.code} login={username} onRetry={retry} />
+          <ProfileError
+            code={state.error.code}
+            login={username}
+            retryAt={state.error.retryAt}
+            onRetry={retry}
+          />
         </div>
       ) : data ? (
         <div className="grid gap-gutter-mobile lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-gutter xl:grid-cols-[320px_minmax(0,1fr)]">
           <div className="lg:sticky lg:top-24 lg:self-start">
             <ProfileCard profile={data.profile} />
+            <LookupsLeft />
           </div>
           <div
             className={`min-w-0 space-y-gutter-mobile transition-opacity lg:space-y-gutter ${busy ? 'opacity-60' : ''}`}

@@ -1,15 +1,24 @@
 import type { UserStats } from '../../shared/types'
+import { setLookupsLeft } from './lookups'
 import { parseUsernameInput } from './username'
 
 export type ApiErrorCode =
-  'not_found' | 'rate_limited' | 'bad_request' | 'upstream' | 'network' | 'not_configured'
+  | 'not_found'
+  | 'rate_limited'
+  | 'quota_exceeded'
+  | 'bad_request'
+  | 'upstream'
+  | 'network'
+  | 'not_configured'
 
 export class ApiError extends Error {
   readonly code: ApiErrorCode
+  readonly retryAt: Date | null // when a refused lookup will be allowed again
 
-  constructor(code: ApiErrorCode, message?: string) {
+  constructor(code: ApiErrorCode, message?: string, retryAt: Date | null = null) {
     super(message ?? code)
     this.code = code
+    this.retryAt = retryAt
   }
 }
 
@@ -45,17 +54,32 @@ export async function fetchStats(
     if (signal?.aborted) throw error
     throw new ApiError('network')
   }
+  readLookupHeaders(response)
   if (response.ok) return (await response.json()) as UserStats
 
   const body = (await response.json().catch(() => null)) as {
     error?: { code?: string; message?: string }
   } | null
-  throw new ApiError(toCode(response.status, body?.error?.code), body?.error?.message)
+  const reset = response.headers.get('X-Lookups-Reset')
+  throw new ApiError(
+    toCode(response.status, body?.error?.code),
+    body?.error?.message,
+    reset ? new Date(reset) : null,
+  )
+}
+
+// The Worker reports the visitor's remaining daily lookups in headers.
+function readLookupHeaders(response: Response) {
+  const remaining = response.headers.get('X-Lookups-Remaining')
+  const limit = response.headers.get('X-Lookups-Limit')
+  if (remaining !== null && limit !== null) {
+    setLookupsLeft({ remaining: Number(remaining), limit: Number(limit) })
+  }
 }
 
 function toCode(status: number, code: string | undefined): ApiErrorCode {
   if (status === 404) return 'not_found'
-  if (status === 429) return 'rate_limited'
+  if (status === 429) return code === 'quota_exceeded' ? 'quota_exceeded' : 'rate_limited'
   if (status === 400) return 'bad_request'
   if (code === 'not_configured') return 'not_configured'
   return 'upstream'

@@ -5,12 +5,14 @@
 //   ?demo=minimal    no bio, location, website, orgs or badges
 //   ?demo=empty      an account with no public activity
 //   ?demo=loading    never finishes loading
-//   ?demo=not_found | rate_limited | upstream | network | not_configured   that error
+//   ?demo=not_found | rate_limited | quota_exceeded | upstream | network | not_configured   that error
 
 import type { RawEvent, RawRepo, RawUser } from '../../shared/github/query'
 import { buildUserStats } from '../../shared/github/shape'
 import type { UserStats } from '../../shared/types'
+import { DAILY_LOOKUPS, isExempt } from '../../shared/limits'
 import { ApiError, type ApiErrorCode } from '../lib/api'
+import { setLookupsLeft } from '../lib/lookups'
 
 const ERRORS: ApiErrorCode[] = [
   'not_found',
@@ -19,6 +21,7 @@ const ERRORS: ApiErrorCode[] = [
   'network',
   'not_configured',
   'bad_request',
+  'quota_exceeded',
 ]
 
 const LEVEL_NAMES = [
@@ -56,7 +59,12 @@ export async function demoStats(
 ): Promise<UserStats> {
   await wait(mode === 'loading' ? 1e9 : 450, signal)
   const error = ERRORS.find((code) => code === mode)
+  if (error === 'quota_exceeded') {
+    setLookupsLeft({ remaining: 0, limit: DAILY_LOOKUPS })
+    throw new ApiError(error, undefined, new Date(Date.now() + 5 * 3600 * 1000))
+  }
   if (error) throw new ApiError(error)
+  if (!isExempt(login)) setLookupsLeft({ remaining: 7, limit: DAILY_LOOKUPS })
 
   const now = new Date()
   const selected = year ?? now.getUTCFullYear()

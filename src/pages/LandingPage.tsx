@@ -2,10 +2,9 @@ import { ArrowRight, CalendarDays, FolderGit2, Keyboard, Timer } from 'lucide-re
 import { useId, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 
+import { DAILY_LOOKUPS, EXAMPLE_LOGINS } from '../../shared/limits'
 import { GridMotif } from '../components/GridMotif'
 import { parseUsernameInput } from '../lib/username'
-
-const EXAMPLES = ['torvalds', 'gaearon', 'sindresorhus', 'antfu', 'yyx990803']
 
 const HIGHLIGHTS = [
   {
@@ -97,7 +96,7 @@ export function LandingPage() {
 
         <div className="mt-space-sm flex max-w-full items-center gap-space-sm overflow-x-auto pb-1">
           <span className="shrink-0 font-label-md text-label-md text-on-surface-variant">Try:</span>
-          {EXAMPLES.map((login) => (
+          {EXAMPLE_LOGINS.map((login) => (
             <Link
               key={login}
               to={`/${login}`}
@@ -107,6 +106,9 @@ export function LandingPage() {
             </Link>
           ))}
         </div>
+        <p className="mt-space-md font-label-sm text-label-sm text-on-surface-variant">
+          Free · up to {DAILY_LOOKUPS} profiles a day per visitor · the examples don’t count
+        </p>
       </section>
 
       <section className="grid gap-gutter-mobile pb-24 md:grid-cols-3 md:gap-gutter">
