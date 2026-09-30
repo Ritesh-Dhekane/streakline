@@ -32,10 +32,8 @@ jobs:
       - run: npm test
       - run: npm run format:check
 
+      # The Worker URL comes from .env.production.
       - run: npm run build
-        env:
-          # Worker URL, set under Settings → Secrets and variables → Actions → Variables.
-          VITE_API_BASE: ${{ vars.VITE_API_BASE }}
 
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -1,2 +1,7 @@
-# Copy to .dev.vars for `npm run worker:dev` (git-ignored). Never commit a real token.
+# Copy to .dev.vars for `npm run worker:dev` (git-ignored). Never commit real credentials.
+# Either a fine-grained personal token (Public repositories, read-only)…
 GITHUB_TOKEN=github_pat_xxx
+# …or the GitHub App (leave GITHUB_TOKEN out to use it):
+# GITHUB_APP_ID=123456
+# GITHUB_APP_INSTALLATION_ID=12345678
+# GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n…\n-----END RSA PRIVATE KEY-----"

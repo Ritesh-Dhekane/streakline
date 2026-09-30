@@ -13,5 +13,5 @@ ALLOWED_ORIGINS = "https://ritesh-dhekane.github.io,http://localhost:5173,http:/
 [[d1_databases]]
 binding = "DB"
 database_name = "streakline"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "9423e20a-cdaa-42fe-babc-3c45a99b54d2"
 migrations_dir = "migrations"

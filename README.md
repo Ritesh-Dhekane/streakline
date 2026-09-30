@@ -44,7 +44,7 @@ npm run dev          # site on http://localhost:5173/streakline/
 
 ### Running the API locally
 
-1. Create a GitHub token (see below) and put it in `.dev.vars` (git-ignored):
+1. Put GitHub credentials (see below) in `.dev.vars` (git-ignored):
    `cp .dev.vars.example .dev.vars`, then replace the placeholder.
 2. `npm run worker:dev` — the API runs on http://localhost:8787, e.g.
    http://localhost:8787/api/user/octocat
@@ -52,35 +52,46 @@ npm run dev          # site on http://localhost:5173/streakline/
 
 ## Deploying the API (Cloudflare Worker)
 
-### 1. Create the GitHub token (public data only)
+The Worker talks to GitHub as a **GitHub App** (or, as a fallback, with a personal token) and
+keeps the credentials as encrypted Cloudflare secrets — never in this repository or the site.
 
-1. GitHub → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
-2. Name `streakline-api`, expiration up to 1 year.
-3. **Repository access: Public repositories (read-only)**. Leave every permission at "No access".
-4. Generate and copy the token. It can only read public data, so even a mistake can't expose
-   anything private.
+### 1. Create the GitHub App (public data only)
+
+1. GitHub → **Settings → Developer settings → GitHub Apps → New GitHub App**.
+2. Homepage URL: the site's URL. Untick **Webhook → Active**. Leave every permission at
+   "No access". Install only on your own account.
+3. Note the **App ID**, click **Generate a private key** (downloads a `.pem`), then
+   **Install App** on your account; the installation ID is the number at the end of the URL.
+
+With no permissions, the App can only read public data.
 
 ### 2. Deploy the Worker
 
-1. Create a free Cloudflare account at https://dash.cloudflare.com/sign-up (no card needed).
-2. `npx wrangler login` — opens the browser once to connect Wrangler to your account.
-3. `npm run worker:deploy` — prints the Worker's URL, e.g.
-   `https://streakline-api.<your-subdomain>.workers.dev`.
-4. `npx wrangler secret put GITHUB_TOKEN` — paste the token when asked. It's stored encrypted
-   in Cloudflare and never in this repository.
-5. Check it: open `<worker URL>/api/user/octocat`.
+```sh
+npx wrangler login                                   # once; opens the browser
+npx wrangler d1 create streakline                    # put the printed database_id in wrangler.toml
+npx wrangler d1 migrations apply streakline --remote
+npm run worker:deploy                                # prints the Worker URL
+npx wrangler secret put GITHUB_APP_ID
+npx wrangler secret put GITHUB_APP_INSTALLATION_ID
+npx wrangler secret put GITHUB_APP_PRIVATE_KEY < path/to/app.private-key.pem
+npx wrangler secret put VISITOR_SALT                 # any long random string
+```
 
-The site reads the Worker URL from `VITE_API_BASE` at build time. Allowed browser origins are
-set in `wrangler.toml` (`ALLOWED_ORIGINS`).
+Check it: open `<worker URL>/api/user/octocat`.
+
+Instead of the App you can set `GITHUB_TOKEN` to a fine-grained personal token with
+**Public repositories (read-only)** access.
+
+Each visitor (a salted hash of their IP, kept for a day in D1) can look up 10 different users
+a day; the owner's profile and the landing page examples don't count (`shared/limits.ts`).
+Allowed browser origins are in `wrangler.toml` (`ALLOWED_ORIGINS`).
 
 ### 3. Publish the site
 
 Every push to `main` runs checks and deploys to GitHub Pages
-(`.github/workflows/deploy.yml`). One-time setup in the repository settings:
-
-1. **Pages** → Build and deployment → Source: **GitHub Actions**.
-2. **Secrets and variables → Actions → Variables** → add `VITE_API_BASE` with the Worker URL.
-   Re-run the workflow after changing it.
+(`.github/workflows/deploy.yml`). The site reads the Worker URL from `.env.production`.
+One-time setup: repository **Settings → Pages → Source: GitHub Actions**.
 
 ## Project layout
 
