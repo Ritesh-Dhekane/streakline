@@ -173,3 +173,37 @@
     @apply bg-background text-on-surface font-sans antialiased;
   }
 }
+
+/* Loading shimmer (DESIGN.md → State Cards). */
+@layer components {
+  .skeleton {
+    background:
+      linear-gradient(
+          90deg,
+          transparent 0%,
+          color-mix(in srgb, var(--c-on-surface) 6%, transparent) 50%,
+          transparent 100%
+        )
+        0 0 / 200% 100%,
+      color-mix(in srgb, var(--c-on-surface) 5%, transparent);
+    animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton {
+      animation: none;
+    }
+  }
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position:
+      100% 0,
+      0 0;
+  }
+  to {
+    background-position:
+      -100% 0,
+      0 0;
+  }
+}

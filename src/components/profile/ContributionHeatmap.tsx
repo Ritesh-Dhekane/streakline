@@ -36,7 +36,7 @@ interface Active {
 
 const TRANSLATE = { start: '-12px -100%', center: '-50% -100%', end: 'calc(-100% + 12px) -100%' }
 
-export function ContributionHeatmap({ stats, busy }: { stats: UserStats; busy: boolean }) {
+export function ContributionHeatmap({ stats }: { stats: UserStats }) {
   const headingId = useId()
   const { weeks, months } = useMemo(
     () => buildHeatmap(stats.calendar, stats.year),
@@ -115,11 +115,7 @@ export function ContributionHeatmap({ stats, busy }: { stats: UserStats; busy: b
         <YearSwitcher years={stats.years} selected={stats.year} />
       </div>
 
-      <div
-        ref={frame}
-        className={`relative mt-space-lg transition-opacity ${busy ? 'opacity-50' : ''}`}
-        aria-busy={busy}
-      >
+      <div ref={frame} className="relative mt-space-lg">
         <div ref={scroller} className="-mx-space-lg -my-1 overflow-x-auto px-space-lg py-1.5">
           <div className="relative min-w-[640px]">
             <svg

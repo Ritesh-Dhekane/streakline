@@ -1,4 +1,5 @@
 import type { UserStats } from '../../shared/types'
+import { parseUsernameInput } from './username'
 
 export type ApiErrorCode =
   'not_found' | 'rate_limited' | 'bad_request' | 'upstream' | 'network' | 'not_configured'
@@ -26,6 +27,7 @@ export async function fetchStats(
   year: number | null,
   signal?: AbortSignal,
 ): Promise<UserStats> {
+  if (parseUsernameInput(login) !== login) throw new ApiError('bad_request')
   if (import.meta.env.DEV) {
     const demo = demoMode()
     if (demo !== null) {
