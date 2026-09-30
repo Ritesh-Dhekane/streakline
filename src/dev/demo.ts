@@ -82,7 +82,10 @@ export async function demoStats(
         day.contributionCount === 0 ? 0 : Math.min(4, Math.ceil(day.contributionCount / 4))
       ] ?? 'NONE',
   }))
-  const total = current.reduce((sum, day) => sum + day.contributionCount, 0)
+  const today = now.toISOString().slice(0, 10)
+  const total = current
+    .filter((day) => day.date <= today)
+    .reduce((sum, day) => sum + day.contributionCount, 0)
 
   const repos: RawRepo[] = empty
     ? []

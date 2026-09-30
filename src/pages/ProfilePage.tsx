@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router'
 
 import { ContributionHeatmap } from '../components/profile/ContributionHeatmap'
 import { ProfileCard } from '../components/profile/ProfileCard'
+import { StatTiles } from '../components/profile/StatTiles'
 import { useUserStats } from '../lib/useUserStats'
 
 export function ProfilePage() {
@@ -29,6 +30,7 @@ export function ProfilePage() {
           </div>
           <div className="min-w-0 space-y-gutter-mobile lg:space-y-gutter">
             <ContributionHeatmap stats={data} busy={state.status === 'loading'} />
+            <StatTiles stats={data} />
           </div>
         </div>
       ) : state.status === 'error' ? (
