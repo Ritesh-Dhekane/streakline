@@ -53,7 +53,7 @@ export function RhythmChart({ stats }: { stats: UserStats }) {
               aria-pressed={view === option}
               className={`rounded-md px-2.5 py-1 font-label-sm text-label-sm transition-colors ${
                 view === option
-                  ? 'bg-primary/15 text-primary'
+                  ? 'bg-primary/15 font-semibold text-on-surface dark:font-medium dark:text-primary'
                   : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >

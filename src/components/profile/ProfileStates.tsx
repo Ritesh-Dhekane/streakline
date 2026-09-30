@@ -15,13 +15,14 @@ import type { ApiErrorCode } from '../../lib/api'
 import { Panel } from '../Panel'
 
 // Loading placeholder shaped like the profile page (DESIGN.md: monochrome shimmer).
-export function ProfileSkeleton() {
+export function ProfileSkeleton({ login }: { login: string }) {
   return (
     <div
       className="grid gap-gutter-mobile lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-gutter xl:grid-cols-[320px_minmax(0,1fr)]"
       role="status"
       aria-label="Loading profile"
     >
+      <h1 className="sr-only">Loading @{login}…</h1>
       <Panel as="div" className="p-space-lg">
         <div className="flex gap-space-md lg:flex-col">
           <Bone className="size-20 rounded-lg lg:size-28" />
@@ -180,14 +181,13 @@ function StateCard({
       <span className="grid size-12 place-items-center rounded-full border border-border bg-surface-container text-on-surface-variant">
         <Icon className="size-5" strokeWidth={1.5} aria-hidden="true" />
       </span>
-      <h1
-        className="mt-space-md font-headline-sm text-headline-sm md:font-headline-md md:text-headline-md"
-        role={alert ? 'alert' : undefined}
-      >
-        {title}
-      </h1>
-      <div className="mt-space-sm max-w-md font-body-md text-body-md text-on-surface-variant">
-        {children}
+      <div role={alert ? 'alert' : undefined}>
+        <h1 className="mt-space-md font-headline-sm text-headline-sm md:font-headline-md md:text-headline-md">
+          {title}
+        </h1>
+        <div className="mx-auto mt-space-sm max-w-md font-body-md text-body-md text-on-surface-variant">
+          {children}
+        </div>
       </div>
     </Panel>
   )

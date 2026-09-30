@@ -66,7 +66,7 @@ export function ProfilePage() {
           </div>
         </div>
       ) : (
-        <ProfileSkeleton />
+        <ProfileSkeleton login={username} />
       )}
     </div>
   )

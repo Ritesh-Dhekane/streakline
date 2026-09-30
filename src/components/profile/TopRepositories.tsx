@@ -51,7 +51,7 @@ export function TopRepositories({ stats }: { stats: UserStats }) {
                   />
                 </span>
                 <span className="mt-space-sm line-clamp-2 flex-1 font-body-md text-body-md text-on-surface-variant">
-                  {repo.description ?? <em className="not-italic opacity-60">No description</em>}
+                  {repo.description ?? <em>No description</em>}
                 </span>
                 <span className="mt-space-md flex flex-wrap items-center gap-x-space-md gap-y-space-xs font-label-sm text-label-sm text-on-surface-variant">
                   {repo.language && (

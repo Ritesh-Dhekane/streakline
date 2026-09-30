@@ -23,7 +23,7 @@ export function YearSwitcher({ years, selected }: { years: number[]; selected: n
               aria-current={year === selected ? 'true' : undefined}
               className={`rounded-md px-2.5 py-1 font-label-md text-label-md transition-colors ${
                 year === selected
-                  ? 'bg-primary/15 text-primary'
+                  ? 'bg-primary/15 font-semibold text-on-surface dark:font-medium dark:text-primary'
                   : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
