@@ -4,7 +4,23 @@ An elegant view of anyone's **public** GitHub activity. Enter a username and get
 their contribution heatmap, streaks, rhythm, languages, top repositories and the
 projects they contribute to — on one calm, readable page.
 
-Live: https://ritesh-dhekane.github.io/streakline/ (coming soon)
+Live: https://ritesh-dhekane.github.io/streakline/
+
+[![Ritesh-Dhekane's GitHub activity](https://streakline-api.streakline.workers.dev/card/Ritesh-Dhekane.svg)](https://ritesh-dhekane.github.io/streakline/Ritesh-Dhekane)
+
+## Features
+
+- Profile page: heatmap by year, streaks, stats, hourly/weekday rhythm, languages, top repos
+  and the open-source projects someone contributes to.
+- **README badge**: a live card for your GitHub profile README (button "Badge" on any profile):
+  `![](https://streakline-api.streakline.workers.dev/card/<user>.svg)` — add `?theme=light`
+  for the light version.
+- **Share links** with rich previews on LinkedIn, X, WhatsApp and Slack
+  (`https://streakline-api.streakline.workers.dev/u/<user>`), and a **PNG download** of the card.
+- **Compare** two people: `/streakline/<user>/vs/<other>`.
+- **Year in review**: `/streakline/<user>/review/<year>`.
+- Recently viewed profiles on the home page (kept in your browser only).
+- Each visitor can look up 10 different people a day; the examples don't count.
 
 ## How it works
 
@@ -92,6 +108,9 @@ Allowed browser origins are in `wrangler.toml` (`ALLOWED_ORIGINS`).
 Every push to `main` runs checks and deploys to GitHub Pages
 (`.github/workflows/deploy.yml`). The site reads the Worker URL from `.env.production`.
 One-time setup: repository **Settings → Pages → Source: GitHub Actions**.
+
+Optional analytics: Cloudflare Web Analytics (cookieless). Add the site in the Cloudflare
+dashboard → Web Analytics, and put its token in `.env.production` as `VITE_CF_BEACON_TOKEN`.
 
 ## Project layout
 
