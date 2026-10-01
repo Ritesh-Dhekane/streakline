@@ -6,7 +6,12 @@ const GRAPHQL_URL = 'https://api.github.com/graphql'
 const EVENTS_PAGES = 3 // GitHub serves at most 300 public events (~90 days)
 const USER_AGENT = 'streakline'
 
-export type GitHubErrorKind = 'not_found' | 'rate_limited' | 'bad_request' | 'upstream'
+export type GitHubErrorKind =
+  | 'not_found'
+  | 'organization' // the login exists but is an organization, which has no contribution calendar
+  | 'rate_limited'
+  | 'bad_request'
+  | 'upstream'
 
 export class GitHubError extends Error {
   readonly kind: GitHubErrorKind
@@ -76,7 +81,7 @@ async function fetchUser(
   }
 
   const body = (await response.json()) as {
-    data?: { user: RawUser | null }
+    data?: { user: RawUser | null; owner?: { __typename: string } | null }
     errors?: { type?: string; message: string }[]
   }
   const errorTypes = (body.errors ?? []).map((e) => e.type)
@@ -85,6 +90,9 @@ async function fetchUser(
   }
   if (!body.data?.user) {
     if (errorTypes.includes('NOT_FOUND') || body.data?.user === null) {
+      if (body.data?.owner?.__typename === 'Organization') {
+        throw new GitHubError('organization', `"${login}" is an organization, not a user`)
+      }
       throw new GitHubError('not_found', `No GitHub user named "${login}"`)
     }
     throw new GitHubError('upstream', body.errors?.[0]?.message ?? 'Unexpected GitHub response')

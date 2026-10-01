@@ -60,7 +60,13 @@ interface Quota {
   decision: Extract<LookupDecision, { allowed: true }>
 }
 
-const ERROR_STATUS = { bad_request: 400, not_found: 404, rate_limited: 429, upstream: 502 } as const
+const ERROR_STATUS = {
+  bad_request: 400,
+  not_found: 404,
+  organization: 404,
+  rate_limited: 429,
+  upstream: 502,
+} as const
 
 export async function handle(request: Request, env: Env, deps: Deps): Promise<Response> {
   const cors = corsHeaders(request, env)
@@ -156,7 +162,9 @@ async function loadStats(
   } catch (err) {
     if (!(err instanceof GitHubError)) throw err
     response = errorResponse(ERROR_STATUS[err.kind], err.kind, err.message)
-    if (err.kind === 'not_found') cacheSeconds = NOT_FOUND_CACHE_SECONDS
+    if (err.kind === 'not_found' || err.kind === 'organization') {
+      cacheSeconds = NOT_FOUND_CACHE_SECONDS
+    }
     if (err.kind === 'rate_limited') response.headers.set('Retry-After', '60')
   }
 

@@ -1,4 +1,5 @@
 import {
+  Building2,
   CloudOff,
   Hourglass,
   PlugZap,
@@ -85,6 +86,12 @@ function errorCopy(code: ApiErrorCode, login: string, retryAt: Date | null): Sta
         icon: UserX,
         title: `No GitHub user called @${login}`,
         text: 'Check the spelling, or try someone else.',
+      }
+    case 'organization':
+      return {
+        icon: Building2,
+        title: `@${login} is an organization`,
+        text: 'Streakline shows the activity of people. Try one of its members instead.',
       }
     case 'bad_request':
       return {

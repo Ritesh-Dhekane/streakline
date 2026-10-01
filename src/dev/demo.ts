@@ -17,6 +17,7 @@ import { setLookupsLeft } from '../lib/lookups'
 
 const ERRORS: ApiErrorCode[] = [
   'not_found',
+  'organization',
   'rate_limited',
   'upstream',
   'network',

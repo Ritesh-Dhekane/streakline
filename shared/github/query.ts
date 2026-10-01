@@ -10,6 +10,10 @@ export const USER_QUERY = /* GraphQL */ `
     $previousFrom: DateTime!
     $previousTo: DateTime!
   ) {
+    # Tells an organization apart from a missing user when user is null.
+    owner: repositoryOwner(login: $login) {
+      __typename
+    }
     user(login: $login) {
       login
       name

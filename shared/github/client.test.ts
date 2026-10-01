@@ -75,6 +75,14 @@ describe('fetchUserStats', () => {
         json({ data: { user: null }, errors: [{ type: 'NOT_FOUND', message: 'x' }] }),
       ),
     ).toBe('not_found')
+    expect(
+      await run(() =>
+        json({
+          data: { user: null, owner: { __typename: 'Organization' } },
+          errors: [{ type: 'NOT_FOUND', message: 'x' }],
+        }),
+      ),
+    ).toBe('organization')
     expect(await run(() => json({ errors: [{ type: 'RATE_LIMITED', message: 'x' }] }))).toBe(
       'rate_limited',
     )

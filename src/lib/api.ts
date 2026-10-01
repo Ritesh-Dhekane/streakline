@@ -5,6 +5,7 @@ import { parseUsernameInput } from './username'
 
 export type ApiErrorCode =
   | 'not_found'
+  | 'organization'
   | 'rate_limited'
   | 'quota_exceeded'
   | 'bad_request'
@@ -77,7 +78,7 @@ function readLookupHeaders(response: Response) {
 }
 
 function toCode(status: number, code: string | undefined): ApiErrorCode {
-  if (status === 404) return 'not_found'
+  if (status === 404) return code === 'organization' ? 'organization' : 'not_found'
   if (status === 429) return code === 'quota_exceeded' ? 'quota_exceeded' : 'rate_limited'
   if (status === 400) return 'bad_request'
   if (code === 'not_configured') return 'not_configured'
