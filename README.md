@@ -8,6 +8,18 @@ Live: https://ritesh-dhekane.github.io/streakline/
 
 [![Ritesh-Dhekane's GitHub activity](https://streakline-api.streakline.workers.dev/card/Ritesh-Dhekane.svg)](https://ritesh-dhekane.github.io/streakline/Ritesh-Dhekane)
 
+## Screenshots
+
+![Profile page for torvalds: heatmap, streaks and stats](.github/screenshots/profile-dark.webp)
+
+| Compare two people                                                      | Year in review                                                      |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| ![gaearon compared with sindresorhus](.github/screenshots/compare.webp) | ![Linus Torvalds's 2025 in review](.github/screenshots/review.webp) |
+
+| Light theme                                                                | On a phone                                                                            |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| ![Profile page in the light theme](.github/screenshots/profile-light.webp) | <img src=".github/screenshots/mobile.webp" alt="Profile page on a phone" width="300"> |
+
 ## Features
 
 - Profile page: heatmap by year, streaks, stats, hourly/weekday rhythm, languages, top repos
