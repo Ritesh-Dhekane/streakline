@@ -53,7 +53,8 @@ export function StatTiles({ stats }: { stats: UserStats }) {
       value: formatNumber(totals.pullRequests),
       icon: GitMerge,
       tone: mergedShare === null ? 'muted' : 'primary',
-      note: mergedShare === null ? `in ${year}` : `${formatPercent(mergedShare)} merged`,
+      // The count is for the year; the merge rate covers every PR they ever opened, so say so.
+      note: mergedShare === null ? `in ${year}` : `${formatPercent(mergedShare)} merged, all time`,
       title:
         mergedShare === null
           ? undefined

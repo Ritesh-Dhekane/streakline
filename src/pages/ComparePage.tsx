@@ -26,7 +26,7 @@ const ROWS: Row[] = [
   { label: 'Current streak', value: (s) => s.streaks.current?.length ?? null, format: days },
   { label: 'Longest streak', value: (s) => s.streaks.longest.length, format: days },
   {
-    label: 'PRs merged',
+    label: 'PRs merged, all time',
     value: (s) => (s.pullRequests.total ? s.pullRequests.merged / s.pullRequests.total : null),
     format: (v) => formatPercent(v),
   },
