@@ -1,0 +1,34 @@
+name: Checks
+
+# Runs on pull requests (releases are PRs from dev into prod). prod's branch protection requires this
+# to pass before a PR can be merged. Plain pushes to dev run nothing; deploying is deploy.yml's job.
+on:
+  pull_request:
+    branches: [prod, dev]
+
+permissions:
+  contents: read
+
+# A newer push to the same PR cancels the run that is still checking older code.
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 24 ships npm 11, which the lockfile and `allowScripts` need.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run format:check
+      - run: npm run build

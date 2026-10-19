@@ -1,8 +1,10 @@
-name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages (prod)
 
+# Releases: a PR from dev into prod (checked by ci.yml) is merged by hand; that push to prod deploys.
+# Run by hand, it deploys prod too. The github-pages environment only accepts prod.
 on:
   push:
-    branches: [main]
+    branches: [prod]
   workflow_dispatch:
 
 permissions:
@@ -19,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: prod
 
       # Node 24 ships npm 11, which the lockfile and `allowScripts` need.
       - uses: actions/setup-node@v4
