@@ -1,5 +1,13 @@
 # Streakline
 
+[![Live site](https://img.shields.io/badge/live-open%20the%20app-2ea44f?logo=googlechrome&logoColor=white)](https://ritesh-dhekane.github.io/streakline/)
+[![Deploy](https://github.com/Ritesh-Dhekane/streakline/actions/workflows/deploy.yml/badge.svg)](https://github.com/Ritesh-Dhekane/streakline/actions/workflows/deploy.yml)
+[![License](https://img.shields.io/github/license/Ritesh-Dhekane/streakline)](LICENSE)
+[![Last commit](https://img.shields.io/github/last-commit/Ritesh-Dhekane/streakline)](https://github.com/Ritesh-Dhekane/streakline/commits)
+![React](https://img.shields.io/badge/React-20232a?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white)
+![Cloudflare Workers](https://img.shields.io/badge/Cloudflare%20Workers-f38020?logo=cloudflareworkers&logoColor=white)
+
 An elegant view of anyone's **public** GitHub activity. Enter a username and get
 their contribution heatmap, streaks, rhythm, languages, top repositories and the
 projects they contribute to — on one calm, readable page.
