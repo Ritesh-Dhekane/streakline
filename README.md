@@ -117,8 +117,10 @@ Allowed browser origins are in `wrangler.toml` (`ALLOWED_ORIGINS`).
 
 ### 3. Publish the site
 
-Every push to `main` runs checks and deploys to GitHub Pages
-(`.github/workflows/deploy.yml`). The site reads the Worker URL from `.env.production`.
+Work happens on `dev`. A release is a pull request from `dev` into `prod`: the **Checks** workflow
+(`.github/workflows/ci.yml`) must pass, and merging it deploys `prod` to GitHub Pages
+(`.github/workflows/deploy.yml`). `prod` is protected: no direct pushes, force-pushes or deletion.
+The site reads the Worker URL from `.env.production`.
 One-time setup: repository **Settings → Pages → Source: GitHub Actions**.
 
 Optional analytics: Cloudflare Web Analytics (cookieless). Add the site in the Cloudflare
