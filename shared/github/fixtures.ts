@@ -59,6 +59,7 @@ export function rawUser(overrides: Partial<RawUser> = {}): RawUser {
       totalPullRequestContributions: 6,
       totalIssueContributions: 2,
       totalPullRequestReviewContributions: 3,
+      restrictedContributionsCount: 4,
       contributionCalendar: {
         totalContributions: 12,
         // Jan 1–5, 2026, plus a stray day from the previous year that GitHub may include.
@@ -76,6 +77,7 @@ export function rawUser(overrides: Partial<RawUser> = {}): RawUser {
     previous: {
       contributionCalendar: { weeks: calendarWeeks('2025-12-29', [2, 2, 2]) },
     },
+    previousToDate: { restrictedContributionsCount: 0 },
     repositories: {
       totalCount: 7,
       nodes: [

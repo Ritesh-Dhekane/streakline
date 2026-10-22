@@ -4,21 +4,23 @@ import { Link, useParams } from 'react-router'
 
 import type { UserStats } from '../../shared/types'
 import { Panel } from '../components/Panel'
+import { PrivateToggle } from '../components/PrivateToggle'
 import { ProfileError } from '../components/profile/ProfileStates'
 import { formatCompact, formatNumber, formatPercent } from '../lib/format'
 import { buildHeatmap } from '../lib/heatmap'
+import { contributionTotal, useIncludePrivate } from '../lib/privateContributions'
 import { useUserStats, type StatsState } from '../lib/useUserStats'
 
 const LEVEL_FILL = ['fill-heat-0', 'fill-heat-1', 'fill-heat-2', 'fill-heat-3', 'fill-heat-4']
 
 interface Row {
   label: string
-  value: (stats: UserStats) => number | null
+  value: (stats: UserStats, includePrivate: boolean) => number | null
   format?: (value: number) => string
 }
 
 const ROWS: Row[] = [
-  { label: 'Contributions', value: (s) => s.totals.contributions },
+  { label: 'Contributions', value: contributionTotal },
   { label: 'Commits', value: (s) => s.totals.commits },
   { label: 'Pull requests', value: (s) => s.totals.pullRequests },
   { label: 'Issues', value: (s) => s.totals.issues },
@@ -49,6 +51,9 @@ export function ComparePage() {
   const right = useUserStats(other, null)
   const a = left.state.status === 'ready' ? left.state.data : null
   const b = right.state.status === 'ready' ? right.state.data : null
+  const [includePrivate, setIncludePrivate] = useIncludePrivate()
+  const anyPrivate =
+    (a?.totals.privateContributions ?? 0) + (b?.totals.privateContributions ?? 0) > 0
 
   useEffect(() => {
     document.title = `${username} vs ${other} · Streakline`
@@ -94,10 +99,19 @@ export function ComparePage() {
 
           {a && b ? (
             <>
-              <Panel className="mt-space-lg overflow-hidden" aria-label="Side by side">
+              <PrivateToggle
+                className="mt-space-lg"
+                checked={includePrivate}
+                onChange={setIncludePrivate}
+                disabled={!anyPrivate}
+                hint="Private contributions aren’t shared on either GitHub profile."
+              />
+              <Panel className="mt-space-md overflow-hidden" aria-label="Side by side">
                 <table className="w-full text-left">
                   <caption className="sr-only">
-                    Public GitHub numbers for {a.year}; the higher value is highlighted.
+                    GitHub numbers for {a.year}
+                    {includePrivate ? '' : ', public contributions only'}; the higher value is
+                    highlighted.
                   </caption>
                   <thead className="font-label-sm text-label-sm text-on-surface-variant">
                     <tr className="border-b border-border">
@@ -117,16 +131,28 @@ export function ComparePage() {
                   </thead>
                   <tbody>
                     {ROWS.map((row) => (
-                      <CompareRow key={row.label} row={row} a={a} b={b} />
+                      <CompareRow
+                        key={row.label}
+                        row={row}
+                        a={a}
+                        b={b}
+                        includePrivate={includePrivate}
+                      />
                     ))}
                   </tbody>
                 </table>
               </Panel>
 
               <div className="mt-space-lg grid gap-gutter-mobile md:grid-cols-2 lg:gap-gutter">
-                <MiniHeatmap stats={a} />
-                <MiniHeatmap stats={b} />
+                <MiniHeatmap stats={a} includePrivate={includePrivate} />
+                <MiniHeatmap stats={b} includePrivate={includePrivate} />
               </div>
+              {anyPrivate && (
+                <p className="mt-space-sm font-label-sm text-label-sm text-on-surface-variant">
+                  Daily squares and streaks include private activity — GitHub doesn’t split it by
+                  day.
+                </p>
+              )}
               <div className="mt-space-lg grid gap-gutter-mobile md:grid-cols-2 lg:gap-gutter">
                 <Languages stats={a} />
                 <Languages stats={b} />
@@ -185,9 +211,19 @@ function Person({
   )
 }
 
-function CompareRow({ row, a, b }: { row: Row; a: UserStats; b: UserStats }) {
-  const va = row.value(a)
-  const vb = row.value(b)
+function CompareRow({
+  row,
+  a,
+  b,
+  includePrivate,
+}: {
+  row: Row
+  a: UserStats
+  b: UserStats
+  includePrivate: boolean
+}) {
+  const va = row.value(a, includePrivate)
+  const vb = row.value(b, includePrivate)
   const format = row.format ?? formatNumber
   const winner = va === null || vb === null || va === vb ? null : va > vb ? 'a' : 'b'
   const cell = (value: number | null, wins: boolean, side: 'a' | 'b') => (
@@ -214,7 +250,9 @@ function CompareRow({ row, a, b }: { row: Row; a: UserStats; b: UserStats }) {
   )
 }
 
-function MiniHeatmap({ stats }: { stats: UserStats }) {
+function MiniHeatmap({ stats, includePrivate }: { stats: UserStats; includePrivate: boolean }) {
+  const total = contributionTotal(stats, includePrivate)
+  const privateCount = stats.totals.privateContributions
   const { weeks } = useMemo(
     () => buildHeatmap(stats.calendar, stats.year),
     [stats.calendar, stats.year],
@@ -223,13 +261,15 @@ function MiniHeatmap({ stats }: { stats: UserStats }) {
   return (
     <Panel className="p-space-md" aria-label={`${stats.profile.login}'s ${stats.year} calendar`}>
       <p className="font-label-sm text-label-sm text-on-surface-variant">
-        @{stats.profile.login} · {formatNumber(stats.totals.contributions)} in {stats.year}
+        @{stats.profile.login} · {formatNumber(total)} in {stats.year}
+        {privateCount > 0 &&
+          ` · ${includePrivate ? 'incl.' : 'excl.'} ${formatNumber(privateCount)} private`}
       </p>
       <svg
         viewBox={`0 0 ${weeks.length * step - 2} ${7 * step - 2}`}
         className="mt-space-sm h-auto w-full"
         role="img"
-        aria-label={`${formatNumber(stats.totals.contributions)} contributions in ${stats.year}`}
+        aria-label={`${formatNumber(total)} contributions in ${stats.year}`}
       >
         {weeks.map((week, w) =>
           week.map((cell, d) =>

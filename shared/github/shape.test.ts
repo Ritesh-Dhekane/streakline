@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { rawEvents, rawUser } from './fixtures'
+import { calendarWeeks, rawEvents, rawUser } from './fixtures'
 import { buildUserStats } from './shape'
 
 const NOW = new Date('2026-01-05T12:00:00Z')
@@ -18,6 +18,36 @@ describe('buildUserStats', () => {
     ])
     expect(stats.calendar.map((d) => d.level)).toEqual([1, 1, 0, 1, 1])
     expect(stats.totals.contributions).toBe(12)
+  })
+
+  it('splits out private contributions, never below zero', () => {
+    expect(stats.totals).toMatchObject({
+      contributions: 12,
+      privateContributions: 4,
+      publicContributions: 8,
+    })
+    const odd = rawUser()
+    odd.contributionsCollection.restrictedContributionsCount = 50
+    const clamped = buildUserStats(odd, [], { year: 2026, now: NOW })
+    expect(clamped.totals.publicContributions).toBe(0)
+  })
+
+  it('compares each mode with the same stretch of last year', () => {
+    const user = rawUser({
+      previous: {
+        contributionCalendar: { weeks: calendarWeeks('2025-01-01', [5, 5, 5, 5, 5, 9]) },
+      },
+      previousToDate: { restrictedContributionsCount: 5 },
+    })
+    const withPrevious = buildUserStats(user, [], { year: 2026, now: NOW })
+    // Jan 1–5: 25 last year (20 public) vs. 12 this year (8 public)
+    expect(withPrevious.previousTotals).toEqual({
+      contributions: 25,
+      privateContributions: 5,
+      publicContributions: 20,
+    })
+    expect(withPrevious.contributionsChange).toBe(-0.52)
+    expect(withPrevious.publicContributionsChange).toBe(-0.6)
   })
 
   it('computes streaks across New Year', () => {

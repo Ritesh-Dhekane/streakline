@@ -51,6 +51,7 @@ export interface CardOptions {
   layout: CardLayout
   avatar: string | null // data: URI, or null to draw initials
   siteLabel: string // e.g. "ritesh-dhekane.github.io/streakline"
+  publicOnly?: boolean // leave out private contributions (?private=0)
 }
 
 export function renderCard(stats: UserStats, options: CardOptions): string {
@@ -76,7 +77,7 @@ export function renderMessageCard(message: string, theme: CardTheme): string {
   ])
 }
 
-function renderBadge(stats: UserStats, { theme, avatar }: CardOptions): string {
+function renderBadge(stats: UserStats, { theme, avatar, publicOnly }: CardOptions): string {
   const p = PALETTES[theme]
   const { profile, totals, streaks, year } = stats
   const name = displayName(stats)
@@ -93,7 +94,13 @@ function renderBadge(stats: UserStats, { theme, avatar }: CardOptions): string {
     logo(W - 104, 30, 0.9),
     `<text x="${W - 84}" y="43" font-family="${SANS}" font-size="13" font-weight="600" fill="${p.muted}">Streakline</text>`,
     // stats
-    stat(24, `Contributions ${year}`, totals.contributions.toLocaleString('en-US'), p.ink, p),
+    stat(
+      24,
+      publicOnly ? `Public contribs ${year}` : `Contributions ${year}`,
+      (publicOnly ? totals.publicContributions : totals.contributions).toLocaleString('en-US'),
+      p.ink,
+      p,
+    ),
     stat(
       150,
       current === null ? 'Commits' : 'Current streak',

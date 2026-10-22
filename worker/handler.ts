@@ -52,6 +52,7 @@ const CACHE_SECONDS = 6 * 60 * 60
 const NOT_FOUND_CACHE_SECONDS = 10 * 60
 const BROWSER_CACHE_SECONDS = 5 * 60
 const CARD_ERROR_CACHE_SECONDS = 10 * 60
+const STATS_VERSION = 2 // bump when UserStats changes shape, so cached stats refresh
 const CARD_VERSION = 2 // bump when the card design changes, so cached cards refresh
 
 interface Quota {
@@ -140,7 +141,7 @@ async function loadStats(
   deps: Deps,
 ): Promise<{ response: Response; hit: boolean }> {
   const cacheKey = new Request(
-    `https://streakline.cache/api/user/${login.toLowerCase()}?year=${year}`,
+    `https://streakline.cache/api/user/${login.toLowerCase()}?year=${year}&v=${STATS_VERSION}`,
   )
   const cached = await deps.cache.match(cacheKey)
   if (cached) return { response: cached, hit: true }
@@ -186,12 +187,13 @@ async function handleCard(
 ): Promise<Response> {
   const theme: CardTheme = url.searchParams.get('theme') === 'light' ? 'light' : 'dark'
   const layout: CardLayout = url.searchParams.get('layout') === 'og' ? 'og' : 'badge'
+  const publicOnly = url.searchParams.get('private') === '0'
   if (!isValidUsername(login)) {
     return svgResponse(renderMessageCard('Not a valid GitHub username', theme), 0)
   }
   const year = deps.now().getUTCFullYear()
   const cacheKey = new Request(
-    `https://streakline.cache/card/${login.toLowerCase()}?theme=${theme}&layout=${layout}&year=${year}&v=${CARD_VERSION}`,
+    `https://streakline.cache/card/${login.toLowerCase()}?theme=${theme}&layout=${layout}&year=${year}${publicOnly ? '&private=0' : ''}&v=${CARD_VERSION}`,
   )
   const cached = await deps.cache.match(cacheKey)
   if (cached) return svgResponse(await cached.text(), CACHE_SECONDS)
@@ -207,6 +209,7 @@ async function handleCard(
   const svg = renderCard(stats, {
     theme,
     layout,
+    publicOnly,
     avatar: await avatarDataUri(stats.profile.avatarUrl, deps),
     siteLabel: siteUrl(env).replace(/^https?:\/\//, ''),
   })
