@@ -15,6 +15,7 @@ import {
 import { RhythmChart } from '../components/profile/RhythmChart'
 import { StatTiles } from '../components/profile/StatTiles'
 import { TopRepositories } from '../components/profile/TopRepositories'
+import { useIncludePrivate } from '../lib/privateContributions'
 import { rememberProfile } from '../lib/recent'
 import { useUserStats } from '../lib/useUserStats'
 
@@ -25,6 +26,7 @@ export function ProfilePage() {
   const [params] = useSearchParams()
   const year = parseYear(params.get('year'))
   const { state, retry } = useUserStats(username, year)
+  const [includePrivate, setIncludePrivate] = useIncludePrivate()
   const data = state.status === 'error' ? null : state.data
   const busy = state.status === 'loading'
 
@@ -66,8 +68,12 @@ export function ProfilePage() {
               <NoPublicActivity login={data.profile.login} />
             ) : (
               <>
-                <ContributionHeatmap stats={data} />
-                <StatTiles stats={data} />
+                <ContributionHeatmap
+                  stats={data}
+                  includePrivate={includePrivate}
+                  onIncludePrivateChange={setIncludePrivate}
+                />
+                <StatTiles stats={data} includePrivate={includePrivate} />
                 <div className="grid gap-gutter-mobile lg:gap-gutter xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
                   <RhythmChart stats={data} />
                   <LanguageBreakdown stats={data} />

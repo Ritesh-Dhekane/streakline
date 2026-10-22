@@ -96,13 +96,26 @@ export function contributionsChange(
   previous: DayCount[],
   today: string,
 ): number | null {
-  const monthDay = today.slice(5)
   const currentSum = current.filter((d) => d.date <= today).reduce((s, d) => s + d.count, 0)
-  const previousSum = previous
-    .filter((d) => d.date.slice(5) <= monthDay)
-    .reduce((s, d) => s + d.count, 0)
-  if (previousSum === 0) return null
-  return Math.round(((currentSum - previousSum) / previousSum) * 1000) / 1000
+  return percentChange(currentSum, sameStretchTotal(previous, today))
+}
+
+// Last year's contributions up to the same month and day as `today`.
+export function sameStretchTotal(previous: DayCount[], today: string): number {
+  const monthDay = today.slice(5)
+  return previous.filter((d) => d.date.slice(5) <= monthDay).reduce((s, d) => s + d.count, 0)
+}
+
+// 0.18 = +18%; null when there's nothing to compare with.
+export function percentChange(current: number, previous: number): number | null {
+  if (previous === 0) return null
+  return Math.round(((current - previous) / previous) * 1000) / 1000
+}
+
+// GitHub's daily counts include private work the user chose to share, but only as a yearly
+// total, so the public-only figure is the difference (never below zero).
+export function publicContributions(total: number, privateCount: number): number {
+  return Math.max(0, total - privateCount)
 }
 
 export interface RepoLanguages {

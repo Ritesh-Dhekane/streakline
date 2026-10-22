@@ -1,6 +1,7 @@
 // One GraphQL request for everything on the profile page except recent events.
 // `previous` is the year before, used for year-over-year change and streaks that
-// run across New Year.
+// run across New Year. `previousToDate` is the same stretch of that year as the selected
+// period, for the private count behind the public-only year-over-year change.
 
 export const USER_QUERY = /* GraphQL */ `
   query UserStats(
@@ -9,6 +10,7 @@ export const USER_QUERY = /* GraphQL */ `
     $to: DateTime!
     $previousFrom: DateTime!
     $previousTo: DateTime!
+    $previousToDate: DateTime!
   ) {
     # Tells an organization apart from a missing user when user is null.
     owner: repositoryOwner(login: $login) {
@@ -45,6 +47,8 @@ export const USER_QUERY = /* GraphQL */ `
         totalPullRequestContributions
         totalIssueContributions
         totalPullRequestReviewContributions
+        # Private contributions the user chose to show: a yearly count only, never per day.
+        restrictedContributionsCount
         contributionCalendar {
           totalContributions
           weeks {
@@ -81,6 +85,9 @@ export const USER_QUERY = /* GraphQL */ `
             }
           }
         }
+      }
+      previousToDate: contributionsCollection(from: $previousFrom, to: $previousToDate) {
+        restrictedContributionsCount
       }
       repositories(
         first: 100
@@ -132,11 +139,17 @@ export const USER_QUERY = /* GraphQL */ `
   }
 `
 
+// Feb 29 has no match in the year before; Feb 28 covers the same stretch.
+function sameDay(monthDay: string): string {
+  return monthDay === '02-29' ? '02-28' : monthDay
+}
+
 export interface YearRange {
   from: string
   to: string
   previousFrom: string
   previousTo: string
+  previousToDate: string // the previous year up to the same day as `to`
 }
 
 // The selected year up to now (current year) or the full year; plus the whole previous year.
@@ -147,6 +160,9 @@ export function yearRange(year: number, now: Date): YearRange {
     to: isCurrentYear ? now.toISOString() : `${year}-12-31T23:59:59Z`,
     previousFrom: `${year - 1}-01-01T00:00:00Z`,
     previousTo: `${year - 1}-12-31T23:59:59Z`,
+    previousToDate: isCurrentYear
+      ? `${year - 1}-${sameDay(now.toISOString().slice(5, 10))}T23:59:59Z`
+      : `${year - 1}-12-31T23:59:59Z`,
   }
 }
 
@@ -198,6 +214,7 @@ export interface RawUser {
     totalPullRequestContributions: number
     totalIssueContributions: number
     totalPullRequestReviewContributions: number
+    restrictedContributionsCount: number
     contributionCalendar: {
       totalContributions: number
       weeks: {
@@ -216,6 +233,7 @@ export interface RawUser {
       weeks: { contributionDays: { date: string; contributionCount: number }[] }[]
     }
   }
+  previousToDate: { restrictedContributionsCount: number }
   repositories: { totalCount: number; nodes: RawRepo[] }
   allPullRequests: { totalCount: number }
   mergedPullRequests: { totalCount: number }

@@ -14,28 +14,43 @@ import type { ReactNode } from 'react'
 
 import type { UserStats } from '../../../shared/types'
 import { formatChange, formatDay, formatNumber, formatPercent } from '../../lib/format'
+import { contributionChange, contributionTotal } from '../../lib/privateContributions'
 
 interface Tile {
   label: string
   value: ReactNode
   note: ReactNode
+  detail?: string // a small line under the value
   icon: LucideIcon
   tone?: 'primary' | 'secondary' | 'muted'
   title?: string
 }
 
-export function StatTiles({ stats }: { stats: UserStats }) {
+export function StatTiles({
+  stats,
+  includePrivate,
+}: {
+  stats: UserStats
+  includePrivate: boolean
+}) {
   const { totals, year, streaks, pullRequests } = stats
-  const change = formatChange(stats.contributionsChange)
-  const down = (stats.contributionsChange ?? 0) < 0
-  const commitShare = totals.contributions ? totals.commits / totals.contributions : null
+  const contributions = contributionTotal(stats, includePrivate)
+  const rawChange = contributionChange(stats, includePrivate)
+  const change = formatChange(rawChange)
+  const down = (rawChange ?? 0) < 0
+  const commitShare = contributions ? totals.commits / contributions : null
   const mergedShare = pullRequests.total ? pullRequests.merged / pullRequests.total : null
   const current = streaks.current
 
   const tiles: Tile[] = [
     {
       label: 'Contributions',
-      value: formatNumber(totals.contributions),
+      value: formatNumber(contributions),
+      detail: !includePrivate
+        ? 'public only'
+        : totals.privateContributions > 0
+          ? `${formatNumber(totals.privateContributions)} private`
+          : undefined,
       icon: change ? (down ? TrendingDown : TrendingUp) : Activity,
       tone: change ? (down ? 'muted' : 'primary') : 'muted',
       note: change ? `${change} YoY` : `in ${year}`,
@@ -129,8 +144,11 @@ function StatTile({ tile }: { tile: Tile }) {
       <p className="mt-space-sm font-headline-lg text-headline-lg-mobile tracking-tight tabular-nums md:text-headline-lg">
         {tile.value}
       </p>
+      {tile.detail && (
+        <p className="font-label-sm text-label-sm text-on-surface-variant">{tile.detail}</p>
+      )}
       <p
-        className={`mt-space-sm flex items-center gap-1 font-label-sm text-label-sm ${TONES[tile.tone ?? 'muted']}`}
+        className={`mt-auto flex pt-space-sm items-center gap-1 font-label-sm text-label-sm ${TONES[tile.tone ?? 'muted']}`}
       >
         <Icon className="size-3.5 shrink-0" aria-hidden="true" />
         <span className="truncate">{tile.note}</span>

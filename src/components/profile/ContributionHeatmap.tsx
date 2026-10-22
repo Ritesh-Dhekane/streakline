@@ -5,7 +5,9 @@ import { Link } from 'react-router'
 import type { UserStats } from '../../../shared/types'
 import { formatLongDay, formatNumber, plural } from '../../lib/format'
 import { buildHeatmap, type HeatCell } from '../../lib/heatmap'
+import { contributionTotal } from '../../lib/privateContributions'
 import { Eyebrow, Panel } from '../Panel'
+import { PrivateToggle } from '../PrivateToggle'
 import { StreakRow } from './StreakRow'
 import { YearSwitcher } from './YearSwitcher'
 
@@ -38,8 +40,18 @@ interface Active {
 
 const TRANSLATE = { start: '-12px -100%', center: '-50% -100%', end: 'calc(-100% + 12px) -100%' }
 
-export function ContributionHeatmap({ stats }: { stats: UserStats }) {
+export function ContributionHeatmap({
+  stats,
+  includePrivate,
+  onIncludePrivateChange,
+}: {
+  stats: UserStats
+  includePrivate: boolean
+  onIncludePrivateChange: (include: boolean) => void
+}) {
   const headingId = useId()
+  const total = contributionTotal(stats, includePrivate)
+  const privateCount = stats.totals.privateContributions
   const { weeks, months } = useMemo(
     () => buildHeatmap(stats.calendar, stats.year),
     [stats.calendar, stats.year],
@@ -107,12 +119,23 @@ export function ContributionHeatmap({ stats }: { stats: UserStats }) {
           <Eyebrow>Activity distribution</Eyebrow>
           <h2 id={headingId} className="mt-space-xs">
             <span className="font-headline-lg text-headline-lg-mobile tracking-tight md:text-headline-lg">
-              {formatNumber(stats.totals.contributions)}
+              {formatNumber(total)}
             </span>{' '}
             <span className="font-headline-sm text-headline-sm text-on-surface-variant">
-              {stats.totals.contributions === 1 ? 'contribution' : 'contributions'} in {stats.year}
+              {total === 1 ? 'contribution' : 'contributions'} in {stats.year}
             </span>
+            {privateCount > 0 && (
+              <span className="block font-label-sm text-label-sm text-on-surface-variant">
+                {includePrivate ? `incl. ${formatNumber(privateCount)} private` : 'public only'}
+              </span>
+            )}
           </h2>
+          <PrivateToggle
+            className="mt-space-sm"
+            checked={includePrivate}
+            onChange={onIncludePrivateChange}
+            disabled={privateCount === 0}
+          />
           <Link
             to={`/${stats.profile.login}/review/${stats.year}`}
             className="mt-space-xs inline-flex items-center gap-1 font-label-sm text-label-sm text-secondary hover:underline"
@@ -202,6 +225,12 @@ export function ContributionHeatmap({ stats }: { stats: UserStats }) {
           </div>
         )}
       </div>
+
+      {privateCount > 0 && (
+        <p className="mt-space-sm font-label-sm text-label-sm text-on-surface-variant">
+          Daily squares and streaks include private activity — GitHub doesn’t split it by day.
+        </p>
+      )}
 
       <StreakRow stats={stats} />
     </Panel>

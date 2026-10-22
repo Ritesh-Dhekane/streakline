@@ -294,6 +294,17 @@ describe('cards and share pages', () => {
     expect(lookups.rows).toHaveLength(0)
   })
 
+  it('leaves private contributions out of the card with private=0, cached separately', async () => {
+    const { call } = cards()
+    const all = await (await call('/card/octo.svg')).text()
+    expect(all).toContain('>Contributions 2026<')
+    expect(all).toContain('>12<')
+    const publicOnly = await (await call('/card/octo.svg?private=0')).text()
+    expect(publicOnly).toContain('>Public contribs 2026<')
+    expect(publicOnly).toContain('>8<')
+    expect(await (await call('/card/octo.svg')).text()).toBe(all)
+  })
+
   it('answers unknown users and rate-limited callers with a message card', async () => {
     const missing = cards({
       graphql: () => json({ data: { user: null }, errors: [{ type: 'NOT_FOUND', message: 'x' }] }),

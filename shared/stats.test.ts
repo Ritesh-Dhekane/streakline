@@ -8,6 +8,8 @@ import {
   languageShares,
   longestStreak,
   mostActiveWeekday,
+  percentChange,
+  publicContributions,
   weekdayAverages,
   type DayCount,
 } from './stats'
@@ -107,6 +109,22 @@ describe('contributionsChange', () => {
 
   it('is null when last year had nothing to compare with', () => {
     expect(contributionsChange(days('2026-01-01', [5]), [], '2026-01-01')).toBe(null)
+  })
+})
+
+describe('percentChange', () => {
+  it('rounds to a tenth of a percent and is null without a baseline', () => {
+    expect(percentChange(8, 20)).toBe(-0.6)
+    expect(percentChange(4, 3)).toBe(0.333)
+    expect(percentChange(5, 0)).toBe(null)
+  })
+})
+
+describe('publicContributions', () => {
+  it('subtracts the private count, never below zero', () => {
+    expect(publicContributions(312, 40)).toBe(272)
+    expect(publicContributions(312, 0)).toBe(312)
+    expect(publicContributions(10, 25)).toBe(0)
   })
 })
 

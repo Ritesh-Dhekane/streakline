@@ -2,7 +2,7 @@
 // checked without a deployed Worker. Never part of the production bundle.
 //
 //   ?demo            a busy, complete profile
-//   ?demo=minimal    no bio, location, website, orgs or badges
+//   ?demo=minimal    no bio, location, website, orgs, badges or shared private contributions
 //   ?demo=low        only 3 lookups left (shows the warning pop-up)
 //   ?demo=empty      an account with no public activity
 //   ?demo=loading    never finishes loading
@@ -97,6 +97,9 @@ export async function demoStats(
     .filter((day) => day.date <= today)
     .reduce((sum, day) => sum + day.contributionCount, 0)
 
+  const previousDays = counts(selected - 1)
+  const stretchEnd = selected === now.getUTCFullYear() ? today.slice(5) : '12-31'
+
   const repos: RawRepo[] = empty
     ? []
     : REPO_IDEAS.map(([name, description], i) => {
@@ -158,6 +161,8 @@ export async function demoStats(
       totalPullRequestContributions: Math.round(total * 0.07),
       totalIssueContributions: Math.round(total * 0.04),
       totalPullRequestReviewContributions: Math.round(total * 0.09),
+      // Private work they chose to share: part of the daily counts, but only a yearly total.
+      restrictedContributionsCount: minimal ? 0 : Math.round(total * 0.14),
       contributionCalendar: {
         totalContributions: total,
         weeks: [{ contributionDays: current }],
@@ -181,7 +186,16 @@ export async function demoStats(
           ],
     },
     previous: {
-      contributionCalendar: { weeks: [{ contributionDays: counts(selected - 1) }] },
+      contributionCalendar: { weeks: [{ contributionDays: previousDays }] },
+    },
+    previousToDate: {
+      restrictedContributionsCount: minimal
+        ? 0
+        : Math.round(
+            previousDays
+              .filter((day) => day.date.slice(5) <= stretchEnd)
+              .reduce((sum, day) => sum + day.contributionCount, 0) * 0.1,
+          ),
     },
     repositories: { totalCount: empty ? 0 : 48, nodes: repos },
     allPullRequests: { totalCount: empty ? 0 : 186 },

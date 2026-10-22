@@ -70,7 +70,9 @@ export interface UserStats {
   years: number[] // years with contributions, newest first
   calendar: CalendarDay[] // the selected year, Jan 1 → Dec 31 (or today)
   totals: {
-    contributions: number
+    contributions: number // includes private contributions the user shares on GitHub
+    privateContributions: number // yearly count only; GitHub doesn't split it by day
+    publicContributions: number // contributions − private, never below 0
     commits: number
     pullRequests: number
     issues: number
@@ -78,6 +80,13 @@ export interface UserStats {
   }
   // Change in contributions vs. the same period of the previous year (0.18 = +18%).
   contributionsChange: number | null
+  publicContributionsChange: number | null // the same, public contributions only
+  // The same stretch of the previous year, for the change above.
+  previousTotals: {
+    contributions: number
+    privateContributions: number
+    publicContributions: number
+  }
   pullRequests: { total: number; merged: number } // all public PRs ever
   streaks: {
     current: Streak | null // only for the current year
