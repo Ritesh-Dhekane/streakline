@@ -53,7 +53,11 @@ export function Layout() {
             Streakline · public GitHub data only ·{' '}
             <a href={REPO_URL} className="text-secondary underline underline-offset-2">
               open source
-            </a>
+            </a>{' '}
+            ·{' '}
+            <Link to="/privacy" className="text-secondary underline underline-offset-2">
+              Privacy
+            </Link>
           </span>
           <span>Not affiliated with GitHub.</span>
         </div>
