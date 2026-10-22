@@ -6,6 +6,7 @@ import { ThemeToggle } from './ThemeToggle'
 import { MobileUsernameSearch, UsernameSearch } from './UsernameSearch'
 
 const REPO_URL = 'https://github.com/Ritesh-Dhekane/streakline'
+const PORTFOLIO_URL = 'https://ritesh-dhekane.github.io/'
 
 export function Layout() {
   const { pathname } = useLocation()
@@ -54,12 +55,27 @@ export function Layout() {
             <a href={REPO_URL} className="text-secondary underline underline-offset-2">
               open source
             </a>{' '}
+            · Not affiliated with GitHub.
+          </span>
+          <span>
+            Made with{' '}
+            <span role="img" aria-label="love">
+              <span aria-hidden="true" className="text-primary">
+                ♥
+              </span>
+            </span>{' '}
+            by{' '}
+            <a
+              href={PORTFOLIO_URL}
+              className="font-medium text-on-surface underline-offset-2 hover:underline"
+            >
+              Ritesh Dhekane
+            </a>{' '}
             ·{' '}
             <Link to="/privacy" className="text-secondary underline underline-offset-2">
               Privacy
             </Link>
           </span>
-          <span>Not affiliated with GitHub.</span>
         </div>
       </footer>
     </div>
