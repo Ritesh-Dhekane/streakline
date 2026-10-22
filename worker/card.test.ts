@@ -22,6 +22,14 @@ describe('renderCard', () => {
     expect(svg).toContain('TypeScript 90%')
   })
 
+  it('shows the public-only total when asked, and everything by default', () => {
+    expect(renderCard(stats, options)).toContain('>Contributions 2026<')
+    const publicOnly = renderCard(stats, { ...options, publicOnly: true })
+    expect(publicOnly).toContain('>Public contribs 2026<')
+    expect(publicOnly).toContain(`>${stats.totals.publicContributions}<`)
+    expect(publicOnly).not.toContain(`>${stats.totals.contributions}<`)
+  })
+
   it('escapes names so a profile cannot inject markup', () => {
     const evil = { ...stats, profile: { ...stats.profile, name: '<script>alert(1)</script>"&' } }
     const svg = renderCard(evil, options)

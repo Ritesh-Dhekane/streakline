@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { fetchUserStats, GitHubError, isValidUsername } from './client'
 import { rawEvents, rawUser } from './fixtures'
+import { yearRange } from './query'
 
 const NOW = new Date('2026-01-05T12:00:00Z')
 
@@ -110,5 +111,15 @@ describe('isValidUsername', () => {
       expect(isValidUsername(ok)).toBe(true)
     for (const bad of ['', '-octo', 'octo-', 'oc--to', 'oc_to', 'x'.repeat(40), '../etc'])
       expect(isValidUsername(bad)).toBe(false)
+  })
+})
+
+describe('yearRange', () => {
+  it('asks for last year up to the same day, for the private count', () => {
+    expect(yearRange(2026, NOW).previousToDate).toBe('2025-01-05T23:59:59Z')
+    expect(yearRange(2025, NOW).previousToDate).toBe('2024-12-31T23:59:59Z')
+    expect(yearRange(2028, new Date('2028-02-29T09:00:00Z')).previousToDate).toBe(
+      '2027-02-28T23:59:59Z',
+    )
   })
 })

@@ -1,11 +1,13 @@
 import {
   activityEvents,
-  contributionsChange,
   currentStreak,
   externalContributions,
   languageShares,
   longestStreak,
   mostActiveWeekday,
+  percentChange,
+  publicContributions,
+  sameStretchTotal,
   weekdayAverages,
   type RepoContribution,
 } from '../stats'
@@ -46,6 +48,13 @@ export function buildUserStats(
   const isCurrentYear = year === now.getUTCFullYear()
   const averages = weekdayAverages(calendar, today)
 
+  const contributions = calendar.reduce((sum, day) => sum + day.count, 0)
+  const privateContributions = collection.restrictedContributionsCount
+  const publicTotal = publicContributions(contributions, privateContributions)
+  const previousContributions = sameStretchTotal(previous, isCurrentYear ? today : `${year}-12-31`)
+  const previousPrivate = user.previousToDate.restrictedContributionsCount
+  const previousPublic = publicContributions(previousContributions, previousPrivate)
+
   return {
     profile: {
       login: user.login,
@@ -67,17 +76,21 @@ export function buildUserStats(
     years: [...collection.contributionYears].sort((a, b) => b - a),
     calendar,
     totals: {
-      contributions: calendar.reduce((sum, day) => sum + day.count, 0),
+      contributions,
+      privateContributions,
+      publicContributions: publicTotal,
       commits: collection.totalCommitContributions,
       pullRequests: collection.totalPullRequestContributions,
       issues: collection.totalIssueContributions,
       reviews: collection.totalPullRequestReviewContributions,
     },
-    contributionsChange: contributionsChange(
-      calendar,
-      previous,
-      isCurrentYear ? today : `${year}-12-31`,
-    ),
+    contributionsChange: percentChange(contributions, previousContributions),
+    publicContributionsChange: percentChange(publicTotal, previousPublic),
+    previousTotals: {
+      contributions: previousContributions,
+      privateContributions: previousPrivate,
+      publicContributions: previousPublic,
+    },
     pullRequests: {
       total: user.allPullRequests.totalCount,
       merged: user.mergedPullRequests.totalCount,
