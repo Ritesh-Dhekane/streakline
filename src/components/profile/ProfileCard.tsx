@@ -24,7 +24,17 @@ import { shareUrl } from '../../lib/links'
 import { Panel } from '../Panel'
 import { ProfileActions } from './ProfileActions'
 
-export function ProfileCard({ profile }: { profile: Profile }) {
+// "Updated 11:07 PM" (or "Updated 23 Oct, 11:07 PM" when it isn't today), in the viewer's time zone.
+function updatedText(iso: string): string {
+  const d = new Date(iso)
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  const today = d.toDateString() === new Date().toDateString()
+  return today
+    ? time
+    : `${d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}, ${time}`
+}
+
+export function ProfileCard({ profile, generatedAt }: { profile: Profile; generatedAt?: string }) {
   const [copied, setCopied] = useState<'login' | 'link' | null>(null)
 
   async function copy(what: 'login' | 'link') {
@@ -89,6 +99,14 @@ export function ProfileCard({ profile }: { profile: Profile }) {
               )}
             </button>
           </div>
+          {generatedAt && (
+            <p
+              className="mt-0.5 font-label-sm text-label-sm text-on-surface-variant"
+              title="The README card shows the same snapshot"
+            >
+              Updated {updatedText(generatedAt)} · refreshes every 6 h
+            </p>
+          )}
           {(profile.isHireable || profile.hasSponsorsListing) && (
             <div className="mt-space-sm flex flex-wrap gap-1.5">
               {profile.isHireable && <Pill>Open to work</Pill>}

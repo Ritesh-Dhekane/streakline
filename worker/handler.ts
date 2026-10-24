@@ -133,6 +133,12 @@ function tokenSource(env: Env, deps: Deps): (() => Promise<string>) | undefined 
   return personalToken ? async () => personalToken : deps.appToken
 }
 
+function statsCacheKey(login: string, year: number): Request {
+  return new Request(
+    `https://streakline.cache/api/user/${login.toLowerCase()}?year=${year}&v=${STATS_VERSION}`,
+  )
+}
+
 // Stats for one user and year as an API response, from the cache or GitHub (then cached).
 async function loadStats(
   login: string,
@@ -140,9 +146,7 @@ async function loadStats(
   env: Env,
   deps: Deps,
 ): Promise<{ response: Response; hit: boolean }> {
-  const cacheKey = new Request(
-    `https://streakline.cache/api/user/${login.toLowerCase()}?year=${year}&v=${STATS_VERSION}`,
-  )
+  const cacheKey = statsCacheKey(login, year)
   const cached = await deps.cache.match(cacheKey)
   if (cached) return { response: cached, hit: true }
 
@@ -192,20 +196,32 @@ async function handleCard(
     return svgResponse(renderMessageCard('Not a valid GitHub username', theme), 0)
   }
   const year = deps.now().getUTCFullYear()
-  const cacheKey = new Request(
-    `https://streakline.cache/card/${login.toLowerCase()}?theme=${theme}&layout=${layout}&year=${year}${publicOnly ? '&private=0' : ''}&v=${CARD_VERSION}`,
-  )
-  const cached = await deps.cache.match(cacheKey)
-  if (cached) return svgResponse(await cached.text(), CACHE_SECONDS)
-  if (!(await allowed(request, deps))) {
-    return svgResponse(renderMessageCard('Busy right now, try again in a minute', theme), 0)
-  }
 
-  const stats = await statsFor(login, year, env, deps)
+  // The card is drawn from the same cached stats as the site, so both always show the same snapshot.
+  // Only a fresh GitHub lookup counts against the per-IP limit.
+  let stats: UserStats | null = null
+  const cachedStats = await deps.cache.match(statsCacheKey(login, year))
+  if (cachedStats && cachedStats.status === 200) stats = (await cachedStats.json()) as UserStats
+  else {
+    if (!(await allowed(request, deps))) {
+      return svgResponse(renderMessageCard('Busy right now, try again in a minute', theme), 0)
+    }
+    stats = await statsFor(login, year, env, deps)
+  }
   if (!stats) {
     const message = renderMessageCard(`No public GitHub data for @${login}`, theme)
     return svgResponse(message, CARD_ERROR_CACHE_SECONDS)
   }
+
+  // The finished SVG is cached per stats snapshot, and only for as long as that snapshot has left,
+  // so image proxies (GitHub's camo) refetch when the site's data refreshes.
+  const age = (deps.now().getTime() - Date.parse(stats.generatedAt)) / 1000
+  const remaining = Math.max(60, Math.round(CACHE_SECONDS - age))
+  const cacheKey = new Request(
+    `https://streakline.cache/card/${login.toLowerCase()}?theme=${theme}&layout=${layout}&year=${year}${publicOnly ? '&private=0' : ''}&at=${encodeURIComponent(stats.generatedAt)}&v=${CARD_VERSION}`,
+  )
+  const cached = await deps.cache.match(cacheKey)
+  if (cached) return svgResponse(await cached.text(), remaining)
   const svg = renderCard(stats, {
     theme,
     layout,
@@ -216,10 +232,10 @@ async function handleCard(
   deps.waitUntil(
     deps.cache.put(
       cacheKey,
-      new Response(svg, { headers: { 'Cache-Control': `public, max-age=${CACHE_SECONDS}` } }),
+      new Response(svg, { headers: { 'Cache-Control': `public, max-age=${remaining}` } }),
     ),
   )
-  return svgResponse(svg, CACHE_SECONDS)
+  return svgResponse(svg, remaining)
 }
 
 // Share link with a rich preview: GET /u/<user> → Open Graph tags, then on to the profile page.
