@@ -57,7 +57,7 @@ export function ProfilePage() {
       ) : data ? (
         <div className="grid gap-gutter-mobile lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-gutter xl:grid-cols-[320px_minmax(0,1fr)]">
           <div className="lg:sticky lg:top-24 lg:self-start">
-            <ProfileCard profile={data.profile} />
+            <ProfileCard profile={data.profile} generatedAt={data.generatedAt} />
             <LookupsLeft />
           </div>
           <div

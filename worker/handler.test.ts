@@ -294,6 +294,18 @@ describe('cards and share pages', () => {
     expect(lookups.rows).toHaveLength(0)
   })
 
+  it('draws the card from the same cached stats as the site, stamped with their time', async () => {
+    const { call, fetch } = cards()
+    const svg = await (await call('/card/octo.svg')).text()
+    expect(svg).toMatch(/>Updated \d{1,2} [A-Z][a-z]{2} \d{2}:\d{2} UTC</)
+    const graphqlCalls = () =>
+      fetch.mock.calls.filter(([u]) => String(u).endsWith('/graphql')).length
+    const before = graphqlCalls()
+    const api = await call('/api/user/octo')
+    expect(api.headers.get('X-Streakline-Cache')).toBe('hit')
+    expect(graphqlCalls()).toBe(before)
+  })
+
   it('leaves private contributions out of the card with private=0, cached separately', async () => {
     const { call } = cards()
     const all = await (await call('/card/octo.svg')).text()
