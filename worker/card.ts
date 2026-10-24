@@ -93,6 +93,8 @@ function renderBadge(stats: UserStats, { theme, avatar, publicOnly }: CardOption
     `<text x="82" y="62" font-family="${MONO}" font-size="12" fill="${p.muted}">@${esc(truncate(profile.login, 30))}</text>`,
     logo(W - 104, 30, 0.9),
     `<text x="${W - 84}" y="43" font-family="${SANS}" font-size="13" font-weight="600" fill="${p.muted}">Streakline</text>`,
+    // When the data was fetched, so a cached card never looks out of step with the site.
+    `<text x="${W - 24}" y="62" text-anchor="end" font-family="${MONO}" font-size="10" fill="${p.muted}">Updated ${esc(updatedLabel(stats.generatedAt))}</text>`,
     // stats
     stat(
       24,
@@ -113,6 +115,14 @@ function renderBadge(stats: UserStats, { theme, avatar, publicOnly }: CardOption
     languages(stats, p),
   ]
   return svg(W, H, `${name}'s GitHub activity on Streakline`, parts)
+}
+
+// "24 Oct 17:37 UTC": a card is seen everywhere, so UTC rather than any one time zone.
+function updatedLabel(iso: string): string {
+  const d = new Date(iso)
+  const month = d.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' })
+  const time = d.toISOString().slice(11, 16)
+  return `${d.getUTCDate()} ${month} ${time} UTC`
 }
 
 function stat(x: number, label: string, value: string, color: string, p: Palette): string {
