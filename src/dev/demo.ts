@@ -10,7 +10,7 @@
 
 import type { RawEvent, RawRepo, RawUser } from '../../shared/github/query'
 import { buildUserStats } from '../../shared/github/shape'
-import type { UserStats } from '../../shared/types'
+import type { OwnerProjects, UserStats } from '../../shared/types'
 import { DAILY_LOOKUPS, isExempt } from '../../shared/limits'
 import { ApiError, type ApiErrorCode } from '../lib/api'
 import { setLookupsLeft } from '../lib/lookups'
@@ -52,6 +52,50 @@ const REPO_IDEAS = [
   ['trace-view', 'Flamegraph and span timeline viewer that runs in the browser.'],
   ['raft-lab', 'A teaching implementation of Raft with a fault-injection harness.'],
 ] as const
+
+// Same `?demo` modes as profiles: `empty` has no repositories, an error name throws that error.
+export async function demoProjects(
+  owner: string,
+  mode: string,
+  signal?: AbortSignal,
+): Promise<OwnerProjects> {
+  await wait(mode === 'loading' ? 1e9 : 450, signal)
+  const error = ERRORS.find((code) => code === mode)
+  if (error) throw new ApiError(error)
+
+  const now = Date.now()
+  const repos =
+    mode === 'empty'
+      ? []
+      : REPO_IDEAS.map(([name, description], i) => ({
+          name,
+          nameWithOwner: `${owner}/${name}`,
+          url: `https://github.com/${owner}/${name}`,
+          description,
+          language: LANGUAGES[i % LANGUAGES.length] ?? null,
+          stars: Math.round(900 / (i + 1) ** 1.6),
+          forks: Math.round(80 / (i + 1) ** 1.5),
+          pushedAt: new Date(now - (i * 9 + 1) * 864e5).toISOString(),
+          homepage: i % 2 === 0 ? `https://${name}.example.com` : null,
+          topics:
+            i % 3 === 0
+              ? []
+              : ['poc', 'labs', LANGUAGES[i % LANGUAGES.length]?.name.toLowerCase() ?? ''],
+        }))
+  return {
+    owner: {
+      login: owner,
+      name: owner,
+      avatarUrl: `https://github.com/${owner}.png`,
+      url: `https://github.com/${owner}`,
+      description: mode === 'minimal' ? null : 'Things we build in the open.',
+      kind: 'organization',
+    },
+    repos,
+    repoCount: repos.length,
+    generatedAt: new Date(now).toISOString(),
+  }
+}
 
 export async function demoStats(
   login: string,

@@ -1,4 +1,4 @@
-import type { UserStats } from '../../shared/types'
+import type { OwnerProjects, UserStats } from '../../shared/types'
 import { API_BASE } from './links'
 import { setLookupsLeft } from './lookups'
 import { parseUsernameInput } from './username'
@@ -66,6 +66,30 @@ export async function fetchStats(
     body?.error?.message,
     reset ? new Date(reset) : null,
   )
+}
+
+export async function fetchProjects(owner: string, signal?: AbortSignal): Promise<OwnerProjects> {
+  if (parseUsernameInput(owner) !== owner) throw new ApiError('bad_request')
+  if (import.meta.env.DEV) {
+    const demo = demoMode()
+    if (demo !== null) {
+      const { demoProjects } = await import('../dev/demo')
+      return demoProjects(owner, demo, signal)
+    }
+  }
+  if (!API_BASE) throw new ApiError('not_configured')
+
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE}/api/projects/${encodeURIComponent(owner)}`, { signal })
+  } catch (error) {
+    if (signal?.aborted) throw error
+    throw new ApiError('network')
+  }
+  if (response.ok) return (await response.json()) as OwnerProjects
+
+  const body = (await response.json().catch(() => null)) as { error?: { code?: string } } | null
+  throw new ApiError(toCode(response.status, body?.error?.code))
 }
 
 // The Worker reports the visitor's remaining daily lookups in headers.

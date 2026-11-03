@@ -103,3 +103,25 @@ export interface UserStats {
   recentActivity: ActivityEvent[] // up to ~90 days of public events
   generatedAt: string
 }
+
+export interface ProjectRepo extends RepoSummary {
+  homepage: string | null
+  topics: string[]
+}
+
+export interface ProjectOwner {
+  login: string
+  name: string | null
+  avatarUrl: string
+  url: string
+  description: string | null // an organization's description, or a user's bio
+  kind: 'user' | 'organization'
+}
+
+// The public repositories of one user or organization.
+export interface OwnerProjects {
+  owner: ProjectOwner
+  repos: ProjectRepo[]
+  repoCount: number // all public, non-fork repositories, which can exceed `repos`
+  generatedAt: string
+}

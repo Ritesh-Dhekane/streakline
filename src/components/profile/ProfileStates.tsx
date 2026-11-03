@@ -91,7 +91,15 @@ function errorCopy(code: ApiErrorCode, login: string, retryAt: Date | null): Sta
       return {
         icon: Building2,
         title: `@${login} is an organization`,
-        text: 'Streakline shows the activity of people. Try one of its members instead.',
+        text: (
+          <>
+            Streakline shows the activity of people. See its{' '}
+            <Link to={`/${login}/projects`} className="text-primary hover:underline">
+              public projects
+            </Link>{' '}
+            or try one of its members instead.
+          </>
+        ),
       }
     case 'bad_request':
       return {
