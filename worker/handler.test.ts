@@ -350,3 +350,66 @@ describe('cards and share pages', () => {
     expect(response.headers.get('Location')).toBe('https://site.example/streakline/')
   })
 })
+
+describe('projects', () => {
+  const owner = {
+    __typename: 'Organization',
+    login: 'acme',
+    avatarUrl: 'https://avatars.example/acme',
+    url: 'https://github.com/acme',
+    name: 'Acme',
+    description: null,
+    repositories: { totalCount: 0, nodes: [] },
+  }
+
+  function projects(options: { limited?: boolean; graphql?: () => Response } = {}) {
+    const cache = new MemoryCache()
+    const pending: Promise<unknown>[] = []
+    const fetch = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        options.graphql?.() ?? json({ data: { owner } }),
+    )
+    const deps: Deps = {
+      cache,
+      fetch,
+      now: () => NOW,
+      waitUntil: (p) => pending.push(p),
+      limiter: { limit: async () => ({ success: !options.limited }) },
+    }
+    const call = async (path: string) => {
+      const response = await handle(
+        new Request(`https://api.example${path}`, { headers: { Origin: ORIGIN } }),
+        ENV,
+        deps,
+      )
+      await Promise.all(pending)
+      return response
+    }
+    return { call, fetch }
+  }
+
+  it('lists the repositories of an organization, cached afterwards', async () => {
+    const { call, fetch } = projects()
+    const response = await call('/api/projects/Acme')
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe(ORIGIN)
+    const body = (await response.json()) as { owner: { kind: string } }
+    expect(body.owner.kind).toBe('organization')
+
+    await call('/api/projects/acme')
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects invalid names and unknown owners', async () => {
+    const { call } = projects({ graphql: () => json({ data: { owner: null } }) })
+    expect((await call('/api/projects/bad--name')).status).toBe(400)
+    expect((await call('/api/projects/ghost')).status).toBe(404)
+  })
+
+  it('limits fresh lookups per IP but still serves cached lists', async () => {
+    const { call, fetch } = projects({ limited: true })
+    const response = await call('/api/projects/acme')
+    expect(response.status).toBe(429)
+    expect(fetch).not.toHaveBeenCalled()
+  })
+})

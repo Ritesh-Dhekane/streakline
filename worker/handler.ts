@@ -6,6 +6,7 @@ import {
   type Lookup,
   type LookupDecision,
 } from '../shared/limits'
+import { fetchOwnerProjects } from '../shared/github/projects'
 import type { UserStats } from '../shared/types'
 import { esc, renderCard, renderMessageCard, type CardLayout, type CardTheme } from './card'
 
@@ -46,12 +47,14 @@ export interface Deps {
 const API_ROUTE = /^\/api\/user\/([^/]+)\/?$/
 const CARD_ROUTE = /^\/card\/([^/]+?)(?:\.svg)?\/?$/
 const SHARE_ROUTE = /^\/u\/([^/]+)\/?$/
+const PROJECTS_ROUTE = /^\/api\/projects\/([^/]+)\/?$/
 const DEFAULT_SITE = 'https://ritesh-dhekane.github.io/streakline'
 const FIRST_YEAR = 2008 // GitHub launched in 2008
 const CACHE_SECONDS = 6 * 60 * 60
 const NOT_FOUND_CACHE_SECONDS = 10 * 60
 const BROWSER_CACHE_SECONDS = 5 * 60
 const CARD_ERROR_CACHE_SECONDS = 10 * 60
+const PROJECTS_VERSION = 1 // bump when OwnerProjects changes shape, so cached lists refresh
 const STATS_VERSION = 2 // bump when UserStats changes shape, so cached stats refresh
 const CARD_VERSION = 2 // bump when the card design changes, so cached cards refresh
 
@@ -81,6 +84,11 @@ export async function handle(request: Request, env: Env, deps: Deps): Promise<Re
   if (card) return handleCard(request, url, decodeURIComponent(card[1] ?? ''), env, deps)
   const share = SHARE_ROUTE.exec(url.pathname)
   if (share) return handleShare(request, url, decodeURIComponent(share[1] ?? ''), env, deps)
+  const projects = PROJECTS_ROUTE.exec(url.pathname)
+  if (projects) {
+    const owner = decodeURIComponent(projects[1] ?? '')
+    return withHeaders(await handleProjects(request, owner, env, deps), cors)
+  }
   const match = API_ROUTE.exec(url.pathname)
   if (!match) return withHeaders(errorResponse(404, 'not_found', 'Unknown endpoint'), cors)
 
@@ -179,6 +187,58 @@ async function loadStats(
     deps.waitUntil(deps.cache.put(cacheKey, stored))
   }
   return { response, hit: false }
+}
+
+// Public repositories of any user or organization: GET /api/projects/<owner>
+// Not part of the visitor allowance (it is one cheap query); fresh GitHub lookups are limited per IP.
+async function handleProjects(
+  request: Request,
+  owner: string,
+  env: Env,
+  deps: Deps,
+): Promise<Response> {
+  if (!isValidUsername(owner)) {
+    return errorResponse(400, 'bad_request', 'Not a valid GitHub username')
+  }
+  const getToken = tokenSource(env, deps)
+  if (!getToken) return errorResponse(500, 'not_configured', 'The API is not configured')
+
+  const cacheKey = new Request(
+    `https://streakline.cache/api/projects/${owner.toLowerCase()}?v=${PROJECTS_VERSION}`,
+  )
+  const cached = await deps.cache.match(cacheKey)
+  if (cached) return cached
+  if (!(await allowed(request, deps))) {
+    return errorResponse(429, 'rate_limited', 'Too many lookups right now')
+  }
+
+  let response: Response
+  let cacheSeconds = 0
+  try {
+    let token: string
+    try {
+      token = await getToken()
+    } catch {
+      throw new GitHubError('upstream', 'Could not authenticate with GitHub')
+    }
+    response = jsonResponse(
+      200,
+      await fetchOwnerProjects(owner, { token, fetch: deps.fetch, now: deps.now() }),
+    )
+    cacheSeconds = CACHE_SECONDS
+  } catch (err) {
+    if (!(err instanceof GitHubError)) throw err
+    response = errorResponse(ERROR_STATUS[err.kind], err.kind, err.message)
+    if (err.kind === 'not_found') cacheSeconds = NOT_FOUND_CACHE_SECONDS
+    if (err.kind === 'rate_limited') response.headers.set('Retry-After', '60')
+  }
+
+  if (cacheSeconds > 0) {
+    const stored = response.clone()
+    stored.headers.set('Cache-Control', `public, max-age=${cacheSeconds}`)
+    deps.waitUntil(deps.cache.put(cacheKey, stored))
+  }
+  return response
 }
 
 // README badge / social preview image: GET /card/<user>.svg?theme=dark|light&layout=badge|og

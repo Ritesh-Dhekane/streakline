@@ -1,5 +1,6 @@
 import { ArrowUpRight, BookMarked, GitFork, Star } from 'lucide-react'
 import { useId } from 'react'
+import { Link } from 'react-router'
 
 import type { UserStats } from '../../../shared/types'
 import { formatCompact, formatNumber, formatRelative } from '../../lib/format'
@@ -19,15 +20,23 @@ export function TopRepositories({ stats }: { stats: UserStats }) {
           <BookMarked className="size-5 text-primary" aria-hidden="true" />
           Top repositories
         </h2>
-        <a
-          href={`${profile.url}?tab=repositories`}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center gap-1 font-label-sm text-label-sm text-on-surface-variant transition-colors hover:text-primary"
-        >
-          View all {formatNumber(publicRepoCount)}
-          <ArrowUpRight className="size-3.5" aria-hidden="true" />
-        </a>
+        <span className="flex items-center gap-space-md">
+          <Link
+            to={`/${profile.login}/projects`}
+            className="font-label-sm text-label-sm text-on-surface-variant transition-colors hover:text-primary"
+          >
+            As project cards
+          </Link>
+          <a
+            href={`${profile.url}?tab=repositories`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1 font-label-sm text-label-sm text-on-surface-variant transition-colors hover:text-primary"
+          >
+            View all {formatNumber(publicRepoCount)}
+            <ArrowUpRight className="size-3.5" aria-hidden="true" />
+          </a>
+        </span>
       </div>
       <ul className="grid gap-gutter-mobile md:grid-cols-2 lg:gap-gutter">
         {topRepos.map((repo) => {
